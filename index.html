@@ -1395,7 +1395,30 @@ function speak(text, onDone) {
         }
       });
     }
+function mergeTranscript(base, addition) {
+  const a = (base || '').trim();
+  const b = (addition || '').trim();
 
+  if (!a) return b;
+  if (!b) return a;
+  if (a === b) return a;
+
+  // als nieuwe tekst al volledig in oude zit
+  if (a.includes(b)) return a;
+
+  // als oude tekst volledig voorin nieuwe zit
+  if (b.startsWith(a)) return b;
+
+  // zoek grootste overlap tussen einde van a en begin van b
+  const maxOverlap = Math.min(a.length, b.length);
+  for (let i = maxOverlap; i > 0; i--) {
+    if (a.slice(-i) === b.slice(0, i)) {
+      return (a + b.slice(i)).trim();
+    }
+  }
+
+  return (a + ' ' + b).trim();
+}
     function listenForUser() {
       if (!conversationActive || isBusy) return;
 
@@ -1414,7 +1437,7 @@ function speak(text, onDone) {
       recognition = new SR();
       recognition.lang = 'fr-FR';
       recognition.interimResults = true;
-      recognition.continuous = true;
+      recognition.continuous = false;
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
@@ -1423,24 +1446,25 @@ function speak(text, onDone) {
       };
 
 recognition.onresult = (e) => {
-  let finalParts = [];
-  let interimParts = [];
+  let finalChunk = '';
+  let interimChunk = '';
 
-  for (let i = 0; i < e.results.length; i++) {
+  for (let i = e.resultIndex; i < e.results.length; i++) {
     const piece = e.results[i][0].transcript.trim();
     if (!piece) continue;
 
     if (e.results[i].isFinal) {
-      finalParts.push(piece);
+      finalChunk = mergeTranscript(finalChunk, piece);
     } else {
-      interimParts.push(piece);
+      interimChunk = mergeTranscript(interimChunk, piece);
     }
   }
 
-  // Bouw transcript opnieuw op vanuit de volledige huidige recognizer-state
-  currentUserTurnFinal = finalParts.join(' ').trim();
-  const interimTranscript = interimParts.join(' ').trim();
-  currentUserTurnText = [currentUserTurnFinal, interimTranscript].filter(Boolean).join(' ').trim();
+  if (finalChunk) {
+    currentUserTurnFinal = mergeTranscript(currentUserTurnFinal, finalChunk);
+  }
+
+  currentUserTurnText = mergeTranscript(currentUserTurnFinal, interimChunk);
 
   setLiveTranscript(currentUserTurnText);
 

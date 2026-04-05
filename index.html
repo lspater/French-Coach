@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -805,7 +805,6 @@
           <div id="countdown-num"></div>
           <div id="countdown-lbl"></div>
         </div>
-
         <div id="state-ring" class="thinking">
           <svg id="state-icon" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="2" width="6" height="12" rx="3"></rect>
@@ -814,7 +813,6 @@
             <line x1="8" y1="23" x2="16" y2="23"></line>
           </svg>
         </div>
-
         <div id="speak-waves">
           <div class="wave"></div>
           <div class="wave"></div>
@@ -826,11 +824,11 @@
         <div id="state-label"></div>
         <div id="live-transcript" class="empty">…</div>
         <button id="stop-btn" onclick="endConversation()">End conversation</button>
-        <button id="analyze-btn" onclick="analyzeSession()" style="display:none;">
-  Analyse session
-</button>
+  
       </div>
-
+ <button id="analyze-btn" onclick="analyzeSession()" style="display:none;">
+  Analyse session
+      </button>
       <div id="text-row">
         <input type="text" id="text-input" placeholder="Or type in French…" onkeydown="if(event.key==='Enter') sendText()">
         <button id="text-send" onclick="sendText()">

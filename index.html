@@ -1012,40 +1012,51 @@
       });
     }
 
-    function pickVoice() {
-      const voices = synth.getVoices();
-      availableVoices = voices.filter(v => v.lang && v.lang.startsWith('fr'));
+function pickVoice() {
+  const voices = synth.getVoices();
+  availableVoices = voices.filter(v => v.lang && v.lang.startsWith('fr'));
 
-      if (!availableVoices.length) {
-        frVoice = null;
-        populateVoiceSelect();
-        return;
-      }
+  if (!availableVoices.length) {
+    frVoice = null;
+    populateVoiceSelect();
+    return;
+  }
 
-      if (selectedVoiceName) {
-        const selected = availableVoices.find(v => v.name === selectedVoiceName);
-        if (selected) {
-          frVoice = selected;
-          populateVoiceSelect();
-          return;
-        }
-      }
-
-      const preferredNames = [
-        'amelie','audrey','aurelie','claire','elodie','fanny','florence',
-        'helene','isabelle','julie','lea','lucie','marie','nathalie',
-        'pauline','sandrine','sophie','sylvie','valerie','virginie',
-        'alice','camille'
-      ];
-
-      let v = availableVoices.find(v => preferredNames.some(n => v.name.toLowerCase().includes(n)));
-      if (!v) v = availableVoices.find(v => !v.name.toLowerCase().includes('thomas'));
-      if (!v) v = availableVoices[0];
-
-      frVoice = v;
-      selectedVoiceName = v.name;
+  // 1. Als user al gekozen heeft → respecteren
+  if (selectedVoiceName) {
+    const selected = availableVoices.find(v => v.name === selectedVoiceName);
+    if (selected) {
+      frVoice = selected;
       populateVoiceSelect();
+      return;
     }
+  }
+
+  // 2. PRIORITEIT: Google voices
+  let v = availableVoices.find(v =>
+    v.name.toLowerCase().includes('google')
+  );
+
+  // 3. Fallback: bekende goede namen
+  if (!v) {
+    const preferredNames = [
+      'amelie','audrey','aurelie','claire','elodie','fanny',
+      'helene','isabelle','julie','lea','lucie','marie'
+    ];
+
+    v = availableVoices.find(v =>
+      preferredNames.some(n => v.name.toLowerCase().includes(n))
+    );
+  }
+
+  // 4. Laatste fallback
+  if (!v) v = availableVoices[0];
+
+  frVoice = v;
+  selectedVoiceName = v.name;
+
+  populateVoiceSelect();
+}
 
     function updateVoice(name) {
       selectedVoiceName = name;

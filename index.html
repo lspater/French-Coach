@@ -811,6 +811,82 @@
   color: var(--terracotta);
 }
 
+    #top-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 1.25rem;
+  background: var(--warm-white);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.top-tab {
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.top-tab.active {
+  background: var(--terracotta);
+  color: white;
+  border-color: var(--terracotta);
+}
+
+#conversation-screen {
+  display: block;
+  min-height: 0;
+}
+
+#mistakes-screen {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+#mistakes-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mistake-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.mistake-title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  margin-bottom: 6px;
+  color: var(--terracotta-dark);
+}
+
+.mistake-count {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+}
+
+.mistake-example {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 8px;
+  color: var(--ink-soft);
+}
+
+.mistake-label {
+  font-weight: 500;
+  color: var(--ink);
+}
 
   </style>
 </head>
@@ -839,9 +915,15 @@
         </div>
       </div>
       <button id="change-key-btn" onclick="changeKey()">Change key</button>
-    </header>
+</header>
 
-    <div id="settings-bar">
+<div id="top-tabs">
+  <button class="top-tab active" onclick="showScreen('conversation', this)">Conversation</button>
+  <button class="top-tab" onclick="showScreen('mistakes', this)">Erreurs</button>
+</div>
+
+<div id="conversation-screen">
+  <div id="settings-bar">
       <div class="setting-group">
         <span class="setting-label">Level</span>
         <div class="pill-group">
@@ -952,8 +1034,13 @@
       <div id="no-mic-note">Microphone not available — use the text box above</div>
     </div>
   </div>
+</div>
 
-  <script>
+<div id="mistakes-screen" style="display:none;">
+  <div id="mistakes-content"></div>
+</div>
+
+<script>
     let apiKey = '';
     let level = 'beginner';
     let pauseSecs = 1;
@@ -1201,6 +1288,104 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
       document.getElementById('main-app').style.display = 'flex';
     }
 
+  function showScreen(screen, btn) {
+  const conversation = document.getElementById('conversation-screen');
+  const mistakes = document.getElementById('mistakes-screen');
+
+  conversation.style.display = screen === 'conversation' ? 'block' : 'none';
+  mistakes.style.display = screen === 'mistakes' ? 'block' : 'none';
+
+  document.querySelectorAll('.top-tab').forEach(tab => tab.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  if (screen === 'mistakes') {
+    renderMistakesScreen();
+  }
+}
+
+function getStoredMistakes() {
+  return JSON.parse(localStorage.getItem('sophie_mistakes') || '[]');
+}
+
+function saveStoredMistakes(mistakes) {
+  localStorage.setItem('sophie_mistakes', JSON.stringify(mistakes));
+}
+
+function appendMistakesToStorage(newMistakes) {
+  if (!Array.isArray(newMistakes) || !newMistakes.length) return;
+
+  const existing = getStoredMistakes();
+
+  const enriched = newMistakes.map(item => ({
+    ...item,
+    date: new Date().toISOString(),
+    level: level
+  }));
+
+  const updated = [...enriched, ...existing].slice(0, 300);
+  saveStoredMistakes(updated);
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function renderMistakesScreen() {
+  const container = document.getElementById('mistakes-content');
+  if (!container) return;
+
+  const mistakes = getStoredMistakes();
+
+  if (!mistakes.length) {
+    container.innerHTML = `
+      <div class="mistake-card">
+        <div class="mistake-title">Pas encore d’erreurs enregistrées</div>
+        <div class="mistake-count">Fais d’abord une conversation, puis une analyse.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const grouped = {};
+
+  mistakes.forEach(m => {
+    if (!grouped[m.type]) {
+      grouped[m.type] = {
+        label: m.label || m.type,
+        count: 0,
+        examples: []
+      };
+    }
+
+    grouped[m.type].count += 1;
+
+    if (grouped[m.type].examples.length < 3) {
+      grouped[m.type].examples.push(m);
+    }
+  });
+
+  const sorted = Object.values(grouped).sort((a, b) => b.count - a.count);
+
+  container.innerHTML = sorted.map(group => `
+    <div class="mistake-card">
+      <div class="mistake-title">${escapeHtml(group.label)}</div>
+      <div class="mistake-count">${group.count} fois</div>
+      ${group.examples.map(ex => `
+        <div class="mistake-example">
+          <div><span class="mistake-label">Toi :</span> ${escapeHtml(ex.original || '')}</div>
+          <div><span class="mistake-label">Correct :</span> ${escapeHtml(ex.corrected || '')}</div>
+          <div><span class="mistake-label">Pourquoi :</span> ${escapeHtml(ex.explanation || '')}</div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+  
     function setLevel(l, btn) {
       level = l;
       document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
@@ -1388,6 +1573,74 @@ Format exact :
     throw new Error('Réponse de correction invalide');
   }
 
+      async function extractMistakesFromSession() {
+  const userMessages = history.filter(msg => msg.role === 'user');
+  if (!userMessages.length) return [];
+
+  const convo = userMessages.map((msg, i) => `${i + 1}. ${msg.content}`).join('\n');
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: `
+Analyse les phrases françaises de l'utilisateur.
+
+Réponds uniquement en JSON valide.
+Ignore les répétitions dues à la dictée ou au speech-to-text.
+Ignore les hésitations.
+N'invente pas de fautes.
+
+Pour chaque vraie faute utile, retourne :
+- type: catégorie courte en snake_case
+- label: nom lisible
+- original: phrase originale
+- corrected: version corrigée
+- explanation: explication très courte
+
+Format exact :
+[
+  {
+    "type": "passe_compose",
+    "label": "Passé composé",
+    "original": "...",
+    "corrected": "...",
+    "explanation": "..."
+  }
+]
+`
+        },
+        {
+          role: 'user',
+          content: convo
+        }
+      ],
+      temperature: 0.2
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error?.message || 'API error');
+  }
+
+  const data = await res.json();
+  const raw = data.choices[0].message.content.trim();
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error('Réponse JSON erreurs invalide');
+  }
+}
+      
   applyCorrectionsToUserBubbles(corrections);
 }
 function applyCorrectionsToUserBubbles(corrections) {
@@ -1825,12 +2078,19 @@ Règles :
     addAnalysisCard(analysis);
 
     try {
-      await fetchUserCorrections();
-    } catch (e) {
-      console.error('Correction error:', e);
-    }
+  await fetchUserCorrections();
+} catch (e) {
+  console.error('Correction error:', e);
+}
 
-    saveSession(analysis);
+try {
+  const extractedMistakes = await extractMistakesFromSession();
+  appendMistakesToStorage(extractedMistakes);
+} catch (e) {
+  console.error('Mistake extraction error:', e);
+}
+
+saveSession(analysis);
 
   } catch (e) {
     addMsg("Erreur pendant l’analyse : " + e.message, "sophie");

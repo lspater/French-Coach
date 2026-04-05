@@ -826,6 +826,9 @@
         <div id="state-label"></div>
         <div id="live-transcript" class="empty">…</div>
         <button id="stop-btn" onclick="endConversation()">End conversation</button>
+        <button id="analyze-btn" onclick="analyzeSession()" style="display:none;">
+  Analyse session
+</button>
       </div>
 
       <div id="text-row">
@@ -1309,6 +1312,7 @@ if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
   synth.speak(utt);
 }
     function beginConversation() {
+      document.getElementById('analyze-btn').style.display = 'none';
       if (conversationActive || isBusy || isSpeakingNow) return;
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
@@ -1401,6 +1405,50 @@ if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
         }
       });
     }
+    async function analyzeSession() {
+  if (!history.length) return;
+
+  addMsg('Analyse en cours...', 'sophie');
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: `
+Analyse the user's French in this conversation.
+
+Give:
+- 3 to 5 important mistakes
+- corrected version
+- short explanation (simple)
+- what the user did well
+
+Only include real mistakes. Ignore repetitions from speech.
+Keep it concise.
+            `
+          },
+          ...history
+        ]
+      })
+    });
+
+    const data = await res.json();
+    const analysis = data.choices[0].message.content;
+
+    addMsg(analysis, 'sophie');
+
+  } catch (e) {
+    addMsg('Erreur pendant analyse: ' + e.message, 'sophie');
+  }
+}
 function mergeTranscript(base, addition) {
   const a = (base || '').trim();
   const b = (addition || '').trim();
@@ -1538,6 +1586,7 @@ recognition.onresult = (e) => {
       document.getElementById('live-screen').style.display = 'none';
       document.getElementById('start-screen').style.display = 'flex';
       setState('idle');
+      document.getElementById('analyze-btn').style.display = 'block';
     }
 
     function sendText() {

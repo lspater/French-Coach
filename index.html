@@ -1225,45 +1225,30 @@
     }
 
     function scheduleSophieReply() {
-      if (!conversationActive) return;
-      if (!currentUserTurnText.trim()) return;
-
-      clearReplyTimer();
-      showCountdown(effectivePauseSecs);
-
-      replyDelayTimer = setTimeout(() => {
-        if (!conversationActive) return;
-
-        const finalText = currentUserTurnText.trim();
-        if (!finalText) return;
-
-        stopRecognition();
-        isRecording = false;
-
-        addMsg(finalText, 'user');
-        history.push({ role: 'user', content: finalText });
-
-        resetCurrentUserTurn();
-        sophieTurn();
-      }, const effectivePauseSecs = pauseSecs === 0 ? 0.8 : pauseSecs;
-
-replyDelayTimer = setTimeout(() => {
   if (!conversationActive) return;
+  if (!currentUserTurnText.trim()) return;
 
-  const finalText = currentUserTurnText.trim();
-  if (!finalText) return;
+  const effectivePauseSecs = pauseSecs === 0 ? 0.8 : pauseSecs;
 
-  stopRecognition();
-  isRecording = false;
+  clearReplyTimer();
+  showCountdown(effectivePauseSecs);
 
-  addMsg(finalText, 'user');
-  history.push({ role: 'user', content: finalText });
+  replyDelayTimer = setTimeout(() => {
+    if (!conversationActive) return;
 
-  resetCurrentUserTurn();
-  sophieTurn();
-}, effectivePauseSecs * 1000);;
-    }
+    const finalText = currentUserTurnText.trim();
+    if (!finalText) return;
 
+    stopRecognition();
+    isRecording = false;
+
+    addMsg(finalText, 'user');
+    history.push({ role: 'user', content: finalText });
+
+    resetCurrentUserTurn();
+    sophieTurn();
+  }, effectivePauseSecs * 1000);
+}
 function speak(text, onDone) {
   const lines = text.split('\n');
 

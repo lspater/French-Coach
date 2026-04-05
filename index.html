@@ -1573,7 +1573,9 @@ Règles :
     const data = await res.json();
     const analysis = data.choices[0].message.content;
 
-    addMsg(analysis, 'sophie');
+addMsg(analysis, 'sophie');
+saveSession(analysis); // <-- HIER toevoegen
+    
   } catch (e) {
     addMsg("Erreur pendant l’analyse : " + e.message, "sophie");
   }
@@ -1719,6 +1721,9 @@ recognition.onresult = (e) => {
       document.getElementById('live-screen').style.display = 'none';
       document.getElementById('start-screen').style.display = 'flex';
       setState('idle');
+      if (history.length) {
+  saveSession(); // fallback als geen analyse is gedaan
+}
       document.getElementById('post-session-actions').style.display = 'flex';    }
 
     function sendText() {
@@ -1763,6 +1768,24 @@ recognition.onresult = (e) => {
       document.getElementById('text-input').value = text;
       document.getElementById('text-input').focus();
     }
+    function saveSession(analysisText = '') {
+  const session = {
+    date: new Date().toISOString(),
+    level: level,
+    history: history,
+    analysis: analysisText
+  };
+
+  let sessions = JSON.parse(localStorage.getItem('sophie_sessions') || '[]');
+
+  sessions.unshift(session);
+
+  if (sessions.length > 20) {
+    sessions = sessions.slice(0, 20);
+  }
+
+  localStorage.setItem('sophie_sessions', JSON.stringify(sessions));
+}
 
     function sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));

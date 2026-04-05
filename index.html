@@ -1502,16 +1502,29 @@ document.getElementById('post-session-actions').style.display = 'none';
       isBusy = true;
       setState('thinking');
 
-      const starters = {
-        beginner: "Bonjour ! Je m'appelle Sophie.\n(Hello! My name is Sophie.)\nJe suis ta professeure de français.\n(I am your French teacher.)\nComment tu t'appelles ?\n(What is your name?)",
-        intermediate: "Bonjour ! Je suis Sophie, ta coach de conversation française. Je suis ravie de pratiquer avec toi aujourd'hui. Dis-moi, qu'est-ce que tu as fait ce week-end ?",
-        advanced: "Bonjour ! Je suis Sophie, ta partenaire de conversation. Dis-moi, qu'est-ce qui t'a poussé à apprendre le français ? Y a-t-il un aspect de la culture française qui t'attire particulièrement ?"
-      };
+const starters = {
+  beginner: [
+    "Bonjour ! Je m'appelle Sophie.\n(Hello! My name is Sophie.)\nComment tu t'appelles ?\n(What is your name?)",
+    "Salut ! On parle un peu français ensemble ?\n(Hi! Shall we speak a little French together?)\nComment tu vas aujourd'hui ?\n(How are you today?)",
+    "Bonjour ! Je suis Sophie.\n(Hello! I am Sophie.)\nTu veux parler de ta journée ?\n(Do you want to talk about your day?)"
+  ],
+  intermediate: [
+    "Bonjour ! Je suis Sophie, ta partenaire de conversation. Qu'est-ce que tu as fait aujourd'hui ?",
+    "Salut ! On peut discuter un peu en français. Tu penses à quoi en ce moment ?",
+    "Bonjour ! Ravie de te retrouver. Comment s'est passée ta journée ?"
+  ],
+  advanced: [
+    "Bonjour. J'aimerais bien commencer simplement : qu'est-ce qui t'occupe l'esprit aujourd'hui ?",
+    "Salut. On peut partir de quelque chose de concret : qu'as-tu vécu d'intéressant récemment ?",
+    "Bonjour. Dis-moi, quel sujet te donnerait envie de parler un peu plus longtemps aujourd'hui ?"
+  ]
+};
 
       let reply;
 
       if (history.length === 0) {
-        reply = starters[level];
+const options = starters[level];
+reply = options[Math.floor(Math.random() * options.length)];
         history.push({ role: 'assistant', content: reply });
         showTyping();
         await sleep(700);

@@ -709,6 +709,36 @@
       margin-top: 6px;
       display: none;
     }
+    .post-btn {
+  min-width: 240px;
+  padding: 12px 18px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.primary-btn {
+  background: var(--terracotta);
+  color: white;
+  border: none;
+}
+
+.primary-btn:hover {
+  background: var(--terracotta-dark);
+}
+
+.secondary-btn {
+  background: var(--warm-white);
+  color: var(--ink-soft);
+  border: 1px solid var(--border);
+}
+
+.secondary-btn:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
   </style>
 </head>
 <body>
@@ -788,17 +818,27 @@
         <span class="hint" onclick="useHint('Comment dit-on ça en français?')">Comment dit-on...?</span>
       </div>
 
-      <div id="start-screen">
-        <button id="start-btn" onclick="beginConversation()">
-          <svg viewBox="0 0 24 24" fill="white" stroke="none">
-            <polygon points="5,3 19,12 5,21"></polygon>
-          </svg>
-        </button>
-        <div id="start-label">
-          Tap to start your French conversation<br>
-          <span style="font-size:12px;color:var(--ink-faint)">Sophie speaks first — then listens for you automatically</span>
-        </div>
-      </div>
+ <div id="start-screen">
+  <button id="start-btn" onclick="beginConversation()">
+    <svg viewBox="0 0 24 24" fill="white" stroke="none">
+      <polygon points="5,3 19,12 5,21"></polygon>
+    </svg>
+  </button>
+
+  <div id="start-label">
+    Tap to start your French conversation<br>
+    <span style="font-size:12px;color:var(--ink-faint)">Sophie speaks first — then listens for you automatically</span>
+  </div>
+
+  <div id="post-session-actions" style="display:none; flex-direction:column; gap:10px; align-items:center; margin-top:8px;">
+    <button id="analyze-btn" onclick="analyzeSession()" class="post-btn primary-btn">
+      Voir mon analyse
+    </button>
+    <button id="restart-btn" onclick="beginConversation()" class="post-btn secondary-btn">
+      Commencer une autre conversation
+    </button>
+  </div>
+</div>
 
       <div id="live-screen">
         <div id="countdown-area">
@@ -826,9 +866,7 @@
         <button id="stop-btn" onclick="endConversation()">End conversation</button>
   
       </div>
- <button id="analyze-btn" onclick="analyzeSession()" style="display:none;">
-  Analyse session
-      </button>
+
       <div id="text-row">
         <input type="text" id="text-input" placeholder="Or type in French…" onkeydown="if(event.key==='Enter') sendText()">
         <button id="text-send" onclick="sendText()">
@@ -1310,7 +1348,7 @@ if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
   synth.speak(utt);
 }
     function beginConversation() {
-      document.getElementById('analyze-btn').style.display = 'none';
+document.getElementById('post-session-actions').style.display = 'none';      
       if (conversationActive || isBusy || isSpeakingNow) return;
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
@@ -1403,10 +1441,10 @@ if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
         }
       });
     }
-    async function analyzeSession() {
+   async function analyzeSession() {
   if (!history.length) return;
 
-  addMsg('Analyse en cours...', 'sophie');
+  addMsg("J’analyse la conversation...", "sophie");
 
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -1421,30 +1459,60 @@ if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
           {
             role: 'system',
             content: `
-Analyse the user's French in this conversation.
+Tu analyses le français de l'utilisateur dans cette conversation.
 
-Give:
-- 3 to 5 important mistakes
-- corrected version
-- short explanation (simple)
-- what the user did well
+Réponds uniquement en français.
+Ignore les répétitions dues à la dictée ou au speech-to-text.
+Ignore les hésitations.
+N'invente pas de fautes.
 
-Only include real mistakes. Ignore repetitions from speech.
-Keep it concise.
-            `
+Donne une analyse courte, claire et bien structurée avec exactement ce format :
+
+Mes 3 points à corriger
+
+1. [erreur courte]
+Correction : ...
+Explication : ...
+
+2. [erreur courte]
+Correction : ...
+Explication : ...
+
+3. [erreur courte]
+Correction : ...
+Explication : ...
+
+Phrase plus naturelle
+...
+
+Points positifs
+- ...
+- ...
+
+Règles :
+- Maximum 3 erreurs importantes
+- Explications très courtes
+- Sois concret
+- Pas d'anglais
+- Pas de paragraphe long
+`
           },
           ...history
         ]
       })
     });
 
+    if (!res.ok) {
+      const e = await res.json();
+      throw new Error(e.error?.message || 'API error');
+    }
+
     const data = await res.json();
     const analysis = data.choices[0].message.content;
 
     addMsg(analysis, 'sophie');
-
   } catch (e) {
-    addMsg('Erreur pendant analyse: ' + e.message, 'sophie');
+    addMsg("Erreur pendant l’analyse : " + e.message, "sophie");
   }
 }
 function mergeTranscript(base, addition) {
@@ -1584,8 +1652,7 @@ recognition.onresult = (e) => {
       document.getElementById('live-screen').style.display = 'none';
       document.getElementById('start-screen').style.display = 'flex';
       setState('idle');
-      document.getElementById('analyze-btn').style.display = 'block';
-    }
+      document.getElementById('post-session-actions').style.display = 'flex';    }
 
     function sendText() {
       const inp = document.getElementById('text-input');

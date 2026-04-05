@@ -752,7 +752,7 @@
 
       <div class="setting-group">
         <span class="setting-label">Thinking time</span>
-        <input type="range" id="pause-slider" min="0" max="6" value="1" step="0.5" oninput="updatePause(this.value)">        <span id="pause-label">6s</span>
+        <input type="range" id="pause-slider" min="0" max="6" value="1" step="0.5" oninput="updatePause(this.value)">        <span id="pause-label">1s</span>
       </div>
 
       <div class="sep"></div>
@@ -1268,11 +1268,15 @@ function speak(text, onDone) {
 
   const now = Date.now();
 
-  if (isSpeakingNow) return;
+if (isSpeakingNow) {
+  if (onDone) onDone();
+  return;
+}
 
-  if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
-    return;
-  }
+if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
+  if (onDone) onDone();
+  return;
+}
 
   isSpeakingNow = true;
   lastSpokenText = clean;
@@ -1305,6 +1309,7 @@ function speak(text, onDone) {
   synth.speak(utt);
 }
     function beginConversation() {
+      if (conversationActive || isBusy || isSpeakingNow) return;
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
         document.getElementById('no-mic-note').style.display = 'block';

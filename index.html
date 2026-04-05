@@ -1690,14 +1690,18 @@ function renderExerciseScreen(feedback = null) {
           : ''
       }
 
-      ${
-        feedback
-          ? `<div class="exercise-feedback">
-              <strong>Corrigé :</strong><br>${escapeHtml(feedback.corrected || '')}<br><br>
-              <strong>Pourquoi :</strong><br>${escapeHtml(feedback.short_feedback || '')}
-            </div>`
-          : ''
-      }
+${
+  feedback
+    ? `<div class="exercise-feedback">
+        ${
+          feedback.is_correct
+            ? `<strong>Bien dit :</strong><br>${escapeHtml(feedback.corrected || '')}<br><br>`
+            : `<strong>Corrigé :</strong><br>${escapeHtml(feedback.corrected || '')}<br><br>`
+        }
+        <strong>Pourquoi :</strong><br>${escapeHtml(feedback.short_feedback || '')}
+      </div>`
+    : ''
+}
 
       <div class="exercise-actions">
         <button class="exercise-btn" onclick="speak(currentExerciseQuestion.question)">🔊 Réécouter</button>
@@ -2727,23 +2731,31 @@ async function evaluateExerciseAnswer(answerText) {
       messages: [
         {
           role: 'system',
-          content: `
-Tu corriges une réponse de français dans un exercice oral.
+        content: `
+Tu corriges une réponse de français dans un exercice oral parlé.
 
 Type d’erreur travaillé : ${currentExerciseType}
 Label : ${currentExerciseLabel}
 Question : ${currentExerciseQuestion?.question || ''}
 
-Règles :
+Règles importantes :
 - Réponds uniquement en JSON valide
-- Corrige la réponse en restant le plus proche possible de l’original
+- L'utilisateur répond à l'oral
+- N'évalue PAS la ponctuation
+- N'évalue PAS les virgules, points, majuscules ou détails purement écrits
+- N'évalue PAS les petites différences de transcription dues au speech-to-text
+- Concentre-toi surtout sur le point de grammaire ciblé : ${currentExerciseType}
+- Si la réponse est correcte à l'oral, même s'il manque une virgule ou une majuscule, considère-la comme correcte
+- Corrige seulement s'il y a une vraie faute utile en français parlé
+- Reste le plus proche possible de l’original
 - Donne une explication courte et concrète
-- Pas de texte hors JSON
+- Si la réponse est globalement bonne, garde la phrase presque identique
 
 Format exact :
 {
   "corrected": "...",
-  "short_feedback": "..."
+  "short_feedback": "...",
+  "is_correct": true
 }
 `
         },
@@ -2767,10 +2779,11 @@ Format exact :
   try {
     return JSON.parse(raw);
   } catch {
-    return {
-      corrected: answerText,
-      short_feedback: "Réponse reçue, mais le retour n’a pas pu être analysé correctement."
-    };
+   return {
+  corrected: answerText,
+  short_feedback: "Réponse reçue.",
+  is_correct: true
+};
   }
 }
   

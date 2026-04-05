@@ -1073,7 +1073,29 @@ function pickVoice() {
       voicePitch = parseFloat(v);
       document.getElementById('pitch-label').textContent = Number(v).toFixed(2);
     }
+function applyLevelDefaults() {
+  const defaults = {
+    beginner: { rate: 1.05, pause: 0.5 },
+    intermediate: { rate: 0.98, pause: 1.0 },
+    advanced: { rate: 0.92, pause: 1.5 }
+  };
 
+  const current = defaults[level];
+  if (!current) return;
+
+  voiceRate = current.rate;
+  pauseSecs = current.pause;
+
+  const rateSlider = document.getElementById('rate-slider');
+  const pauseSlider = document.getElementById('pause-slider');
+
+  if (rateSlider) rateSlider.value = String(current.rate);
+  if (pauseSlider) pauseSlider.value = String(current.pause);
+
+  document.getElementById('rate-label').textContent = current.rate.toFixed(2);
+  document.getElementById('pause-label').textContent =
+    current.pause === 0 ? 'fast' : current.pause.toFixed(1) + 's';
+}
     function setLiveTranscript(text = '') {
       const el = document.getElementById('live-transcript');
       const clean = (text || '').trim();
@@ -1190,11 +1212,11 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
         advanced: 'Avancé'
       }[l];
 
-      if (conversationActive) endConversation();
-      history = [];
-      document.getElementById('chat').innerHTML = '';
-      setLiveTranscript('');
-    }
+ if (conversationActive) endConversation();
+history = [];
+document.getElementById('chat').innerHTML = '';
+setLiveTranscript('');
+applyLevelDefaults();
 
       function updatePause(v) {
   pauseSecs = parseFloat(v);
@@ -2095,11 +2117,10 @@ recognition.onresult = (e) => {
         showApp();
       }
 
-      updatePause(document.getElementById('pause-slider').value);
-      updateRate(document.getElementById('rate-slider').value);
-      updatePitch(document.getElementById('pitch-slider').value);
-      pickVoice();
-      setLiveTranscript('');
+applyLevelDefaults();
+updatePitch(document.getElementById('pitch-slider').value);
+pickVoice();
+setLiveTranscript('');
     });
   </script>
 </body>

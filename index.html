@@ -1630,6 +1630,9 @@ Règles :
 - Niveau adapté à : ${level}
 - Les questions doivent être concrètes, simples et parlées
 - Pas d'explications longues
+- Ne crée PAS de phrases avec des blancs ou des underscores
+- Ne crée PAS d’exercices écrits type "______"
+- Pose uniquement des questions naturelles à l’oral
 
 Format exact :
 [
@@ -2191,8 +2194,14 @@ function speak(text, onDone) {
     return true;
   });
 
-  const clean = spokenLines.join(' ').replace(/\s+/g, ' ').trim();
-  if (!clean) {
+let clean = spokenLines.join(' ').replace(/\s+/g, ' ').trim();
+
+// verwijder invuloefening dingen
+clean = clean
+  .replace(/_+/g, ' ')         // ______ → ...
+  .replace(/\([^)]*\)/g, '')     // (faire) → weg
+  .replace(/\s+/g, ' ')          // opnieuw opschonen
+  .trim();  if (!clean) {
     if (onDone) onDone();
     return;
   }
@@ -2719,37 +2728,24 @@ function listenForExerciseAnswer() {
   recognition.start();
 }
 
-async function evaluateExerciseAnswer(answerText) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-        content: `
-Tu corriges une réponse de français dans un exercice oral parlé.
+content: `
+Tu corriges une réponse de français dans un exercice oral.
 
 Type d’erreur travaillé : ${currentExerciseType}
 Label : ${currentExerciseLabel}
 Question : ${currentExerciseQuestion?.question || ''}
 
-Règles importantes :
+Règles STRICTES :
 - Réponds uniquement en JSON valide
-- L'utilisateur répond à l'oral
-- N'évalue PAS la ponctuation
-- N'évalue PAS les virgules, points, majuscules ou détails purement écrits
-- N'évalue PAS les petites différences de transcription dues au speech-to-text
-- Concentre-toi surtout sur le point de grammaire ciblé : ${currentExerciseType}
-- Si la réponse est correcte à l'oral, même s'il manque une virgule ou une majuscule, considère-la comme correcte
-- Corrige seulement s'il y a une vraie faute utile en français parlé
-- Reste le plus proche possible de l’original
-- Donne une explication courte et concrète
-- Si la réponse est globalement bonne, garde la phrase presque identique
+- L'utilisateur répond à l’oral (pas à l’écrit)
+- Ignore totalement la ponctuation (virgules, points, majuscules)
+- Ignore les différences de style parlé vs écrit
+- Vérifie d’abord si la réponse est correcte en français parlé
+- Si la réponse est correcte → NE CORRIGE PAS
+- Si c’est correct → renvoie EXACTEMENT la même phrase
+- Corrige uniquement s’il y a une vraie faute grammaticale
+- Concentre-toi uniquement sur : ${currentExerciseType}
+- N’invente jamais une erreur
 
 Format exact :
 {

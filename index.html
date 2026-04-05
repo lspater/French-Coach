@@ -778,6 +778,17 @@
   margin-bottom: 4px;
   color: var(--ink-soft);
 }
+
+    .user-correction {
+  margin-top: 6px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.95);
+}
   </style>
 </head>
 <body>
@@ -1169,7 +1180,13 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
 
       const bw = document.createElement('div');
       bw.className = 'bubble-wrap';
-
+    if (role === 'user') {
+  const replay = document.createElement('button');
+  replay.textContent = '🔊';
+  replay.style.marginTop = '4px';
+  replay.onclick = () => speak(text);
+  bw.appendChild(replay);
+}
       if (role === 'sophie') {
         const lines = text.split('\n');
         let frLines = [];
@@ -1189,10 +1206,14 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
   }
 });
 
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble sophie';
-        bubble.textContent = frLines.join(' ') || text;
-        bw.appendChild(bubble);
+const bubble = document.createElement('div');
+bubble.className = 'bubble user';
+bubble.textContent = text;
+
+const userIndex = document.querySelectorAll('.msg.user').length;
+bubble.setAttribute('data-user-index', userIndex);
+
+bw.appendChild(bubble);
 
         if (enLines.length) {
           const tr = document.createElement('div');
@@ -1245,6 +1266,92 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
       chat.scrollTop = chat.scrollHeight;
     }
 
+    async function fetchUserCorrections() {
+  const userMessages = history.filter(msg => msg.role === 'user');
+  if (!userMessages.length) return;
+
+  const numberedMessages = userMessages
+    .map((msg, i) => `${i + 1}. ${msg.content}`)
+    .join('\n');
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: `
+Tu corriges les phrases françaises de l'utilisateur.
+
+Règles :
+- Réponds uniquement en JSON valide.
+- Corrige chaque phrase en restant le plus proche possible de l'original.
+- N'améliore pas le style plus que nécessaire.
+- Corrige seulement pour obtenir un français naturel et correct.
+- Ignore les répétitions évidentes dues à la dictée ou au speech-to-text.
+- Une correction par phrase.
+- Si la phrase est déjà correcte, renvoie quand même la phrase correcte, très proche de l'original.
+
+Format exact :
+[
+  { "index": 1, "corrected": "..." },
+  { "index": 2, "corrected": "..." }
+]
+`
+        },
+        {
+          role: 'user',
+          content: numberedMessages
+        }
+      ],
+      temperature: 0.2
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error?.message || 'API error');
+  }
+
+  const data = await res.json();
+  const raw = data.choices[0].message.content.trim();
+
+  let corrections;
+  try {
+    corrections = JSON.parse(raw);
+  } catch {
+    throw new Error('Réponse de correction invalide');
+  }
+
+  applyCorrectionsToUserBubbles(corrections);
+}
+    function applyCorrectionsToUserBubbles(corrections) {
+  if (!Array.isArray(corrections)) return;
+
+  corrections.forEach(item => {
+    if (!item || typeof item.index !== 'number' || !item.corrected) return;
+
+    const bubble = document.querySelector(`.bubble.user[data-user-index="${item.index - 1}"]`);
+    if (!bubble) return;
+
+    const wrap = bubble.parentElement;
+    if (!wrap) return;
+
+    const existing = wrap.querySelector('.user-correction');
+    if (existing) existing.remove();
+
+    const correction = document.createElement('div');
+    correction.className = 'user-correction';
+    correction.textContent = 'Version corrigée : ' + item.corrected;
+
+    wrap.appendChild(correction);
+  });
+}
     function removeTyping() {
       const el = document.getElementById('typing-ind');
       if (el) el.remove();
@@ -1700,10 +1807,17 @@ Règles :
     }
 
     const data = await res.json();
-    const analysis = data.choices[0].message.content;
+const analysis = data.choices[0].message.content;
 
 addAnalysisCard(analysis);
-    saveSession(analysis); // <-- HIER toevoegen
+
+try {
+  await fetchUserCorrections();
+} catch (e) {
+  console.error('Correction error:', e);
+}
+
+saveSession(analysis);
     
   } catch (e) {
     addMsg("Erreur pendant l’analyse : " + e.message, "sophie");

@@ -1690,21 +1690,11 @@ reply = options[Math.floor(Math.random() * options.length)];
         }
       });
     }
-   async function analyzeSession() {
+async function analyzeSession() {
   if (!history.length) return;
 
   addMsg("J’analyse la conversation...", "sophie");
 
-
-    card.appendChild(div);
-  });
-
-  bw.appendChild(card);
-  wrap.appendChild(av);
-  wrap.appendChild(bw);
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-}
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -1729,17 +1719,20 @@ Donne une analyse courte, claire et bien structurée avec exactement ce format :
 
 Mes 3 points à corriger
 
-1. [erreur courte]
+1.
+Erreur : ...
 Correction : ...
-Explication : ...
+Pourquoi : ...
 
-2. [erreur courte]
+2.
+Erreur : ...
 Correction : ...
-Explication : ...
+Pourquoi : ...
 
-3. [erreur courte]
+3.
+Erreur : ...
 Correction : ...
-Explication : ...
+Pourquoi : ...
 
 Phrase plus naturelle
 ...
@@ -1767,23 +1760,22 @@ Règles :
     }
 
     const data = await res.json();
-const analysis = data.choices[0].message.content;
+    const analysis = data.choices[0].message.content;
 
-addAnalysisCard(analysis);
+    addAnalysisCard(analysis);
 
-try {
-  await fetchUserCorrections();
-} catch (e) {
-  console.error('Correction error:', e);
-}
+    try {
+      await fetchUserCorrections();
+    } catch (e) {
+      console.error('Correction error:', e);
+    }
 
-saveSession(analysis);
-    
+    saveSession(analysis);
+
   } catch (e) {
     addMsg("Erreur pendant l’analyse : " + e.message, "sophie");
   }
 }
-
     function addAnalysisCard(text) {
   const chat = document.getElementById('chat');
 
@@ -1829,7 +1821,17 @@ saveSession(analysis);
       div.className = 'analysis-text';
       div.textContent = line;
     }
-function mergeTranscript(base, addition) {
+
+    card.appendChild(div);
+  });
+
+  bw.appendChild(card);
+  wrap.appendChild(av);
+  wrap.appendChild(bw);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+    function mergeTranscript(base, addition) {
   const a = (base || '').trim();
   const b = (addition || '').trim();
 
@@ -1837,13 +1839,9 @@ function mergeTranscript(base, addition) {
   if (!b) return a;
   if (a === b) return a;
 
-  // als nieuwe tekst al volledig in oude zit
   if (a.includes(b)) return a;
-
-  // als oude tekst volledig voorin nieuwe zit
   if (b.startsWith(a)) return b;
 
-  // zoek grootste overlap tussen einde van a en begin van b
   const maxOverlap = Math.min(a.length, b.length);
   for (let i = maxOverlap; i > 0; i--) {
     if (a.slice(-i) === b.slice(0, i)) {

@@ -779,15 +779,48 @@
   color: var(--ink-soft);
 }
 
-    .user-correction {
+.user-correction {
   margin-top: 6px;
-  padding: 7px 10px;
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.28);
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
   font-size: 12px;
   line-height: 1.45;
+
+  background: #ffffff;
+  color: var(--ink);
+
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+    .replay-btn {
+  margin-top: 6px;
+  align-self: flex-end;
+  padding: 6px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.14);
   color: rgba(255,255,255,0.95);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.replay-btn:hover {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.4);
+}
+
+.replay-btn.sophie {
+  align-self: flex-start;
+  background: var(--cream);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+}
+
+.replay-btn.sophie:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
 }
   </style>
 </head>
@@ -1204,6 +1237,11 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
     bubble.className = 'bubble sophie';
     bubble.textContent = frLines.join(' ') || text;
     bw.appendChild(bubble);
+    const replay = document.createElement('button');
+replay.className = 'replay-btn sophie';
+replay.textContent = '🔊 Réécouter';
+replay.onclick = () => speak(frLines.join(' ') || text);
+bw.appendChild(replay);
 
     if (enLines.length) {
       const tr = document.createElement('div');
@@ -1228,11 +1266,11 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
 
     bw.appendChild(bubble);
 
-    const replay = document.createElement('button');
-    replay.textContent = '🔊';
-    replay.style.marginTop = '4px';
-    replay.onclick = () => speak(text);
-    bw.appendChild(replay);
+const replay = document.createElement('button');
+replay.className = 'replay-btn';
+replay.textContent = '🔊 Écouter';
+replay.onclick = () => speak(text);
+bw.appendChild(replay);
   }
 
   wrap.appendChild(av);
@@ -1351,8 +1389,7 @@ function applyCorrectionsToUserBubbles(corrections) {
 
     const correction = document.createElement('div');
     correction.className = 'user-correction';
-    correction.textContent = 'Version corrigée : ' + corrected;
-
+correction.textContent = 'Corrigé : ' + corrected;
     wrap.appendChild(correction);
   });
 }

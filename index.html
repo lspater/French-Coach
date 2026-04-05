@@ -913,6 +913,9 @@
     let manuallyStoppingRecognition = false;
     let userTurnActive = false;
 
+    let blockListeningUntil = 0;
+    let isAssistantSpeaking = false;
+
     function populateVoiceSelect() {
       const select = document.getElementById('voice-select');
       if (!select) return;
@@ -1326,14 +1329,20 @@ function scheduleSophieReply() {
     const finalText = currentUserTurnText.trim();
     if (!finalText) return;
 
-    stopRecognition();
-    isRecording = false;
+stopRecognition();
+isRecording = false;
+blockListeningUntil = Date.now() + 1500;
 
-    addMsg(finalText, 'user');
-    history.push({ role: 'user', content: finalText });
+addMsg(finalText, 'user');
+history.push({ role: 'user', content: finalText });
 
-    resetCurrentUserTurn();
+resetCurrentUserTurn();
+
+setTimeout(() => {
+  if (conversationActive) {
     sophieTurn();
+  }
+}, 150);
   }, effectivePauseSecs * 1000);
 }
 function speak(text, onDone) {
@@ -1378,20 +1387,26 @@ if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
   utt.rate = voiceRate;
   utt.pitch = voicePitch;
 
-  utt.onstart = () => {
-    setState('speaking');
-    setLiveTranscript('');
-  };
+utt.onstart = () => {
+  isAssistantSpeaking = true;
+  blockListeningUntil = Date.now() + 1200;
+  setState('speaking');
+  setLiveTranscript('');
+};
 
-  utt.onend = () => {
-    isSpeakingNow = false;
-    if (onDone) onDone();
-  };
+utt.onend = () => {
+  isSpeakingNow = false;
+  isAssistantSpeaking = false;
+  blockListeningUntil = Date.now() + 800;
+  if (onDone) onDone();
+};
 
-  utt.onerror = () => {
-    isSpeakingNow = false;
-    if (onDone) onDone();
-  };
+utt.onerror = () => {
+  isSpeakingNow = false;
+  isAssistantSpeaking = false;
+  blockListeningUntil = Date.now() + 800;
+  if (onDone) onDone();
+};
 
   synth.speak(utt);
 }
@@ -1587,9 +1602,10 @@ function mergeTranscript(base, addition) {
 
   return (a + ' ' + b).trim();
 }
-    function listenForUser() {
-      if (!conversationActive || isBusy) return;
-
+  function listenForUser() {
+  if (!conversationActive || isBusy) return;
+  if (isAssistantSpeaking) return;
+  if (Date.now() < blockListeningUntil) return;
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return;
 
@@ -1614,6 +1630,10 @@ function mergeTranscript(base, addition) {
       };
 
 recognition.onresult = (e) => {
+  recognition.onresult = (e) => {
+  if (isAssistantSpeaking) return;
+  if (Date.now() < blockListeningUntil) return;
+  
   let finalChunk = '';
   let interimChunk = '';
 
@@ -1678,7 +1698,7 @@ recognition.onresult = (e) => {
           if (conversationActive && !isBusy) {
             listenForUser();
           }
-        }, 150);
+        }, 350);
       };
 
       recognition.start();

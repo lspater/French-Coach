@@ -739,6 +739,45 @@
   border-color: var(--terracotta);
   color: var(--terracotta);
 }
+
+    .analysis-card {
+  padding: 16px 18px;
+  line-height: 1.55;
+}
+
+.analysis-heading {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  color: var(--terracotta-dark);
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+
+.analysis-heading:first-child {
+  margin-top: 0;
+}
+
+.analysis-number {
+  font-weight: 700;
+  margin-top: 10px;
+  color: var(--ink);
+}
+
+.analysis-line {
+  margin-left: 8px;
+  margin-bottom: 4px;
+  color: var(--ink-soft);
+}
+
+.analysis-text {
+  margin-bottom: 6px;
+}
+
+.analysis-bullet {
+  margin-left: 8px;
+  margin-bottom: 4px;
+  color: var(--ink-soft);
+}
   </style>
 </head>
 <body>
@@ -1525,7 +1564,61 @@ document.getElementById('post-session-actions').style.display = 'none';
   if (!history.length) return;
 
   addMsg("J’analyse la conversation...", "sophie");
+function addAnalysisCard(text) {
+  const chat = document.getElementById('chat');
 
+  const wrap = document.createElement('div');
+  wrap.className = 'msg sophie';
+
+  const av = document.createElement('div');
+  av.className = 'msg-avatar sophie';
+  av.textContent = 'S';
+
+  const bw = document.createElement('div');
+  bw.className = 'bubble-wrap';
+
+  const card = document.createElement('div');
+  card.className = 'bubble sophie analysis-card';
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  lines.forEach(line => {
+    const div = document.createElement('div');
+
+    if (
+      line === 'Mes 3 points à corriger' ||
+      line === 'Phrase plus naturelle' ||
+      line === 'Points positifs'
+    ) {
+      div.className = 'analysis-heading';
+      div.textContent = line;
+    } else if (/^[123]\.$/.test(line)) {
+      div.className = 'analysis-number';
+      div.textContent = line;
+    } else if (
+      line.startsWith('Erreur :') ||
+      line.startsWith('Correction :') ||
+      line.startsWith('Pourquoi :')
+    ) {
+      div.className = 'analysis-line';
+      div.textContent = line;
+    } else if (line.startsWith('- ')) {
+      div.className = 'analysis-bullet';
+      div.textContent = line;
+    } else {
+      div.className = 'analysis-text';
+      div.textContent = line;
+    }
+
+    card.appendChild(div);
+  });
+
+  bw.appendChild(card);
+  wrap.appendChild(av);
+  wrap.appendChild(bw);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -1590,8 +1683,8 @@ Règles :
     const data = await res.json();
     const analysis = data.choices[0].message.content;
 
-addMsg(analysis, 'sophie');
-saveSession(analysis); // <-- HIER toevoegen
+addAnalysisCard(analysis);
+    saveSession(analysis); // <-- HIER toevoegen
     
   } catch (e) {
     addMsg("Erreur pendant l’analyse : " + e.message, "sophie");

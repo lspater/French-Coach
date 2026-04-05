@@ -610,6 +610,21 @@
       min-height: 18px;
     }
 
+    #live-transcript {
+      min-height: 20px;
+      max-width: 320px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--ink-soft);
+      line-height: 1.4;
+      padding: 0 8px;
+      opacity: 0.95;
+    }
+
+    #live-transcript.empty {
+      color: var(--ink-faint);
+    }
+
     #stop-btn {
       padding: 8px 20px;
       border-radius: 20px;
@@ -773,6 +788,7 @@
         </div>
 
         <div id="state-label"></div>
+        <div id="live-transcript" class="empty">…</div>
         <button id="stop-btn" onclick="endConversation()">End conversation</button>
       </div>
 
@@ -830,15 +846,28 @@
       frVoice = v;
     }
 
+    function setLiveTranscript(text = '') {
+      const el = document.getElementById('live-transcript');
+      const clean = (text || '').trim();
+
+      if (!clean) {
+        el.textContent = '…';
+        el.classList.add('empty');
+      } else {
+        el.textContent = clean;
+        el.classList.remove('empty');
+      }
+    }
+
     pickVoice();
     if (speechSynthesis.onvoiceschanged !== undefined) {
       speechSynthesis.onvoiceschanged = pickVoice;
     }
 
     const systemPrompts = {
-      beginner: `You are Sophie, a warm and patient French conversation tutor for absolute beginners. Rules: Always write French first, then English translation in parentheses on the next line. Keep sentences very short (A1-A2). Always end with ONE simple question. Correct mistakes gently by using the right form naturally, adding: "Petit conseil: on dit '...' — Quick tip: we say '...'". Topics: greetings, name, family, food, colors, numbers, weather. Max 3 sentences.`,
-      intermediate: `You are Sophie, a friendly French conversation coach for intermediate learners (B1-B2). Rules: Write primarily in French; English only for corrections. End every reply with ONE engaging question. Correct errors naturally, add "On dirait plutôt '...'" when needed. Use passé composé, imparfait, futur proche naturally. Topics: travel, food, culture, opinions, weekend, work. Max 4 sentences.`,
-      advanced: `You are Sophie, a sophisticated French conversation partner for advanced learners (C1-C2). Rules: Write entirely in French. Correct only significant errors subtly. Ask one intellectually stimulating open-ended question per reply. Use rich vocabulary, idioms, subjunctive. Topics: philosophy, literature, current events, cinema, politics, art. Max 5 sentences.`
+      beginner: `You are Sophie, a warm and patient French conversation tutor for absolute beginners. Rules: Always write French first, then English translation in parentheses on the next line. Keep sentences very short (A1-A2). Always end with ONE simple question. If you correct something, do it only in French, naturally, using: "Petit conseil : on dit ...". Do not add any English explanation for corrections. Topics: greetings, name, family, food, colors, numbers, weather. Max 3 sentences.`,
+      intermediate: `You are Sophie, a friendly French conversation coach for intermediate learners (B1-B2). Rules: Write primarily in French; English only for translations if really needed. End every reply with ONE engaging question. Correct errors naturally, using French only, with "Petit conseil : on dit ...". Do not add English correction text. Use passé composé, imparfait, futur proche naturally. Topics: travel, food, culture, opinions, weekend, work. Max 4 sentences.`,
+      advanced: `You are Sophie, a sophisticated French conversation partner for advanced learners (C1-C2). Rules: Write entirely in French. Correct only significant errors subtly and in French only. Ask one intellectually stimulating open-ended question per reply. Use rich vocabulary, idioms, subjunctive. Topics: philosophy, literature, current events, cinema, politics, art. Max 5 sentences.`
     };
 
     function saveKey() {
@@ -880,6 +909,7 @@
       if (conversationActive) endConversation();
       history = [];
       document.getElementById('chat').innerHTML = '';
+      setLiveTranscript('');
     }
 
     function updatePause(v) {
@@ -912,7 +942,7 @@
 
           if (t.startsWith('(') && t.endsWith(')')) {
             enLines.push(t.slice(1, -1));
-          } else if (t.toLowerCase().includes('petit conseil') || t.toLowerCase().includes('on dirait')) {
+          } else if (t.toLowerCase().includes('petit conseil')) {
             corrections.push(t);
           } else {
             frLines.push(t);
@@ -934,7 +964,7 @@
         corrections.forEach(c => {
           const tag = document.createElement('div');
           tag.className = 'correction-tag';
-          tag.textContent = '📝 ' + c;
+          tag.textContent = c;
           bw.appendChild(tag);
         });
       } else {
@@ -1078,12 +1108,14 @@
       currentUserTurnText = '';
       currentUserTurnFinal = '';
       userTurnActive = false;
+      setLiveTranscript('');
     }
 
     function beginCurrentUserTurn() {
       currentUserTurnText = '';
       currentUserTurnFinal = '';
       userTurnActive = true;
+      setLiveTranscript('');
     }
 
     function scheduleSophieReply() {
@@ -1121,7 +1153,10 @@
       utt.rate = 0.88;
       utt.pitch = 1.1;
 
-      utt.onstart = () => setState('speaking');
+      utt.onstart = () => {
+        setState('speaking');
+        setLiveTranscript('');
+      };
       utt.onend = () => { if (onDone) onDone(); };
       utt.onerror = () => { if (onDone) onDone(); };
 
@@ -1163,9 +1198,9 @@
       setState('thinking');
 
       const starters = {
-        beginner: "Bonjour! Je m'appelle Sophie.\n(Hello! My name is Sophie.)\nJe suis ta professeure de français!\n(I am your French teacher!)\nComment tu t'appelles?\n(What is your name?)",
-        intermediate: "Bonjour! Je suis Sophie, ta coach de conversation française. Je suis ravie de pratiquer avec toi aujourd'hui! Alors, qu'est-ce que tu as fait ce week-end?",
-        advanced: "Bonjour! Je suis Sophie, ta partenaire de conversation. Dis-moi, qu'est-ce qui t'a poussé à apprendre le français? Y a-t-il un aspect de la culture française qui t'attire particulièrement?"
+        beginner: "Bonjour ! Je m'appelle Sophie.\n(Hello! My name is Sophie.)\nJe suis ta professeure de français.\n(I am your French teacher.)\nComment tu t'appelles ?\n(What is your name?)",
+        intermediate: "Bonjour ! Je suis Sophie, ta coach de conversation française. Je suis ravie de pratiquer avec toi aujourd'hui. Alors, qu'est-ce que tu as fait ce week-end ?",
+        advanced: "Bonjour ! Je suis Sophie, ta partenaire de conversation. Dis-moi, qu'est-ce qui t'a poussé à apprendre le français ? Y a-t-il un aspect de la culture française qui t'attire particulièrement ?"
       };
 
       let reply;
@@ -1202,7 +1237,7 @@
           history.push({ role: 'assistant', content: reply });
         } catch (e) {
           removeTyping();
-          addMsg('Désolée, erreur: ' + e.message, 'sophie');
+          addMsg('Désolée, erreur : ' + e.message, 'sophie');
           setState('idle');
           isBusy = false;
           return;
@@ -1266,6 +1301,8 @@
         }
 
         currentUserTurnText = (currentUserTurnFinal + ' ' + interimTranscript).trim();
+
+        setLiveTranscript(currentUserTurnText);
 
         if (currentUserTurnText) {
           scheduleSophieReply();
@@ -1363,6 +1400,7 @@
 
       isBusy = true;
       synth.cancel();
+      setLiveTranscript('');
 
       addMsg(text, 'user');
       history.push({ role: 'user', content: text });
@@ -1385,6 +1423,7 @@
         apiKey = saved;
         showApp();
       }
+      setLiveTranscript('');
     });
   </script>
 </body>

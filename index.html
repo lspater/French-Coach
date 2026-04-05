@@ -2085,7 +2085,9 @@ Règles :
 
 try {
   const extractedMistakes = await extractMistakesFromSession();
+  console.log('EXTRACTED MISTAKES:', extractedMistakes);
   appendMistakesToStorage(extractedMistakes);
+  console.log('STORED MISTAKES:', getStoredMistakes());
 } catch (e) {
   console.error('Mistake extraction error:', e);
 }

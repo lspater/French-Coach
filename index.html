@@ -1169,78 +1169,77 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
     }
 
     function addMsg(text, role) {
-      const chat = document.getElementById('chat');
+  const chat = document.getElementById('chat');
 
-      const wrap = document.createElement('div');
-      wrap.className = `msg ${role}`;
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
 
-      const av = document.createElement('div');
-      av.className = `msg-avatar ${role}`;
-      av.textContent = role === 'sophie' ? 'S' : 'U';
+  const av = document.createElement('div');
+  av.className = `msg-avatar ${role}`;
+  av.textContent = role === 'sophie' ? 'S' : 'U';
 
-      const bw = document.createElement('div');
-      bw.className = 'bubble-wrap';
-    if (role === 'user') {
-  const replay = document.createElement('button');
-  replay.textContent = '🔊';
-  replay.style.marginTop = '4px';
-  replay.onclick = () => speak(text);
-  bw.appendChild(replay);
-}
-      if (role === 'sophie') {
-        const lines = text.split('\n');
-        let frLines = [];
-        let enLines = [];
-        let corrections = [];
+  const bw = document.createElement('div');
+  bw.className = 'bubble-wrap';
 
-      lines.forEach(line => {
-  const t = line.trim();
-  if (!t) return;
+  if (role === 'sophie') {
+    const lines = text.split('\n');
+    let frLines = [];
+    let enLines = [];
+    let corrections = [];
 
-  if (t.startsWith('(') && t.endsWith(')')) {
-    enLines.push(t.slice(1, -1));
-  } else if (t.toLowerCase().startsWith('petit conseil')) {
-    corrections.push(t);
-  } else {
-    frLines.push(t);
-  }
-});
+    lines.forEach(line => {
+      const t = line.trim();
+      if (!t) return;
 
-const bubble = document.createElement('div');
-bubble.className = 'bubble user';
-bubble.textContent = text;
-
-const userIndex = document.querySelectorAll('.msg.user').length;
-bubble.setAttribute('data-user-index', userIndex);
-
-bw.appendChild(bubble);
-
-        if (enLines.length) {
-          const tr = document.createElement('div');
-          tr.className = 'translation';
-          tr.textContent = enLines.join(' ');
-          bw.appendChild(tr);
-        }
-
-        corrections.forEach(c => {
-          const tag = document.createElement('div');
-          tag.className = 'correction-tag';
-          tag.textContent = c;
-          bw.appendChild(tag);
-        });
+      if (t.startsWith('(') && t.endsWith(')')) {
+        enLines.push(t.slice(1, -1));
+      } else if (t.toLowerCase().startsWith('petit conseil')) {
+        corrections.push(t);
       } else {
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble user';
-        bubble.textContent = text;
-        bw.appendChild(bubble);
+        frLines.push(t);
       }
+    });
 
-      wrap.appendChild(av);
-      wrap.appendChild(bw);
-      chat.appendChild(wrap);
-      chat.scrollTop = chat.scrollHeight;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble sophie';
+    bubble.textContent = frLines.join(' ') || text;
+    bw.appendChild(bubble);
+
+    if (enLines.length) {
+      const tr = document.createElement('div');
+      tr.className = 'translation';
+      tr.textContent = enLines.join(' ');
+      bw.appendChild(tr);
     }
 
+    corrections.forEach(c => {
+      const tag = document.createElement('div');
+      tag.className = 'correction-tag';
+      tag.textContent = c;
+      bw.appendChild(tag);
+    });
+  } else {
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble user';
+    bubble.textContent = text;
+
+    const userIndex = document.querySelectorAll('.msg.user').length;
+    bubble.setAttribute('data-user-index', userIndex);
+
+    bw.appendChild(bubble);
+
+    const replay = document.createElement('button');
+    replay.textContent = '🔊';
+    replay.style.marginTop = '4px';
+    replay.onclick = () => speak(text);
+    bw.appendChild(replay);
+  }
+
+  wrap.appendChild(av);
+  wrap.appendChild(bw);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
     function showTyping() {
       const chat = document.getElementById('chat');
 
@@ -1330,7 +1329,7 @@ Format exact :
 
   applyCorrectionsToUserBubbles(corrections);
 }
-    function applyCorrectionsToUserBubbles(corrections) {
+function applyCorrectionsToUserBubbles(corrections) {
   if (!Array.isArray(corrections)) return;
 
   corrections.forEach(item => {
@@ -1338,6 +1337,11 @@ Format exact :
 
     const bubble = document.querySelector(`.bubble.user[data-user-index="${item.index - 1}"]`);
     if (!bubble) return;
+
+    const original = bubble.textContent.trim();
+    const corrected = item.corrected.trim();
+
+    if (!corrected || corrected === original) return;
 
     const wrap = bubble.parentElement;
     if (!wrap) return;
@@ -1347,7 +1351,7 @@ Format exact :
 
     const correction = document.createElement('div');
     correction.className = 'user-correction';
-    correction.textContent = 'Version corrigée : ' + item.corrected;
+    correction.textContent = 'Version corrigée : ' + corrected;
 
     wrap.appendChild(correction);
   });
@@ -1690,51 +1694,7 @@ reply = options[Math.floor(Math.random() * options.length)];
   if (!history.length) return;
 
   addMsg("J’analyse la conversation...", "sophie");
-function addAnalysisCard(text) {
-  const chat = document.getElementById('chat');
 
-  const wrap = document.createElement('div');
-  wrap.className = 'msg sophie';
-
-  const av = document.createElement('div');
-  av.className = 'msg-avatar sophie';
-  av.textContent = 'S';
-
-  const bw = document.createElement('div');
-  bw.className = 'bubble-wrap';
-
-  const card = document.createElement('div');
-  card.className = 'bubble sophie analysis-card';
-
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-
-  lines.forEach(line => {
-    const div = document.createElement('div');
-
-    if (
-      line === 'Mes 3 points à corriger' ||
-      line === 'Phrase plus naturelle' ||
-      line === 'Points positifs'
-    ) {
-      div.className = 'analysis-heading';
-      div.textContent = line;
-    } else if (/^[123]\.$/.test(line)) {
-      div.className = 'analysis-number';
-      div.textContent = line;
-    } else if (
-      line.startsWith('Erreur :') ||
-      line.startsWith('Correction :') ||
-      line.startsWith('Pourquoi :')
-    ) {
-      div.className = 'analysis-line';
-      div.textContent = line;
-    } else if (line.startsWith('- ')) {
-      div.className = 'analysis-bullet';
-      div.textContent = line;
-    } else {
-      div.className = 'analysis-text';
-      div.textContent = line;
-    }
 
     card.appendChild(div);
   });
@@ -1823,6 +1783,52 @@ saveSession(analysis);
     addMsg("Erreur pendant l’analyse : " + e.message, "sophie");
   }
 }
+
+    function addAnalysisCard(text) {
+  const chat = document.getElementById('chat');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'msg sophie';
+
+  const av = document.createElement('div');
+  av.className = 'msg-avatar sophie';
+  av.textContent = 'S';
+
+  const bw = document.createElement('div');
+  bw.className = 'bubble-wrap';
+
+  const card = document.createElement('div');
+  card.className = 'bubble sophie analysis-card';
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  lines.forEach(line => {
+    const div = document.createElement('div');
+
+    if (
+      line === 'Mes 3 points à corriger' ||
+      line === 'Phrase plus naturelle' ||
+      line === 'Points positifs'
+    ) {
+      div.className = 'analysis-heading';
+      div.textContent = line;
+    } else if (/^[123]\.$/.test(line)) {
+      div.className = 'analysis-number';
+      div.textContent = line;
+    } else if (
+      line.startsWith('Erreur :') ||
+      line.startsWith('Correction :') ||
+      line.startsWith('Pourquoi :')
+    ) {
+      div.className = 'analysis-line';
+      div.textContent = line;
+    } else if (line.startsWith('- ')) {
+      div.className = 'analysis-bullet';
+      div.textContent = line;
+    } else {
+      div.className = 'analysis-text';
+      div.textContent = line;
+    }
 function mergeTranscript(base, addition) {
   const a = (base || '').trim();
   const b = (addition || '').trim();

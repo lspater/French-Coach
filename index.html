@@ -1095,7 +1095,7 @@
 
       <div class="setting-group">
         <span class="setting-label">Thinking time</span>
-        <input type="range" id="pause-slider" min="0" max="6" value="1" step="0.5" oninput="updatePause(this.value)">        <span id="pause-label">1.0s</span>
+        <input type="range" id="pause-slider" min="0" max="6" value="1" step="1" oninput="updatePause(this.value)">        <span id="pause-label">1.0s</span>
       </div>
 
       <div class="sep"></div>
@@ -1767,8 +1767,8 @@ applyLevelDefaults();
     }
       function updatePause(v) {
   pauseSecs = parseFloat(v);
-  const label = pauseSecs === 0 ? 'fast' : Number(v).toFixed(1) + 's';
-  document.getElementById('pause-label').textContent = label;
+const label = pauseSecs === 0 ? 'fast' : Math.round(pauseSecs) + 's';
+        document.getElementById('pause-label').textContent = label;
     }
 
     function addMsg(text, role) {
@@ -2087,26 +2087,26 @@ correction.textContent = 'Corrigé : ' + corrected;
       document.getElementById('countdown-lbl').textContent = '';
     }
 
-    function showCountdown(secs) {
-      clearCountdown();
+function showCountdown(secs) {
+  clearCountdown();
 
-      const num = document.getElementById('countdown-num');
-      const lbl = document.getElementById('countdown-lbl');
+  const num = document.getElementById('countdown-num');
+  const lbl = document.getElementById('countdown-lbl');
 
-      let s = secs;
+  let s = Math.ceil(secs); // ← dit is de key
+
+  num.textContent = s;
+  lbl.textContent = 'seconds before Sophie replies';
+
+  countdownInterval = setInterval(() => {
+    s--;
+    if (s > 0) {
       num.textContent = s;
-      lbl.textContent = 'seconds before Sophie replies';
-
-      countdownInterval = setInterval(() => {
-        s--;
-        if (s > 0) {
-          num.textContent = s;
-          lbl.textContent = 'seconds before Sophie replies';
-        } else {
-          clearCountdown();
-        }
-      }, 1000);
+    } else {
+      clearCountdown();
     }
+  }, 1000);
+}
 
     function clearReplyTimer() {
       if (replyDelayTimer) {

@@ -951,6 +951,100 @@
   flex-wrap: wrap;
   margin-top: 10px;
 }
+
+    #exercise-screen {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+#exercise-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exercise-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.exercise-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  color: var(--terracotta-dark);
+  margin-bottom: 8px;
+}
+
+.exercise-subtitle {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.exercise-question {
+  font-size: 16px;
+  color: var(--ink);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.exercise-progress {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+
+.exercise-answer {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.exercise-feedback {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.exercise-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.exercise-btn {
+  padding: 8px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.exercise-btn:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
     
   </style>
 </head>
@@ -1114,9 +1208,11 @@
 
   <div id="mistakes-content"></div>
 </div>
-</div>
 
-  
+<div id="exercise-screen" style="display:none;">
+  <div id="exercise-content"></div>
+</div>
+</div>
   
 <script>
     let apiKey = '';
@@ -1153,6 +1249,13 @@
 
     let blockListeningUntil = 0;
     let isAssistantSpeaking = false;
+
+  let exerciseMode = false;
+let currentExerciseType = null;
+let currentExerciseItems = [];
+let currentExerciseIndex = 0;
+let currentExerciseQuestion = '';
+let currentExerciseExpectedFocus = '';
 
     function populateVoiceSelect() {
       const select = document.getElementById('voice-select');
@@ -1369,9 +1472,11 @@ Max 5 sentences for the main reply, plus optional 1 short correction line.`
   function showScreen(screen, btn) {
   const conversation = document.getElementById('conversation-screen');
   const mistakes = document.getElementById('mistakes-screen');
+  const exercise = document.getElementById('exercise-screen');
 
   conversation.style.display = screen === 'conversation' ? 'block' : 'none';
   mistakes.style.display = screen === 'mistakes' ? 'block' : 'none';
+  exercise.style.display = screen === 'exercise' ? 'block' : 'none';
 
   document.querySelectorAll('.top-tab').forEach(tab => tab.classList.remove('active'));
   if (btn) btn.classList.add('active');
@@ -1452,23 +1557,206 @@ function renderMistakesScreen() {
 
   const sorted = Object.values(grouped).sort((a, b) => b.count - a.count);
 
-  container.innerHTML = sorted.map(group => `
-    <div class="mistake-card">
-      <div class="mistake-title">${escapeHtml(group.label)}</div>
-      <div class="mistake-count">${group.count} fois</div>
-      ${group.examples.map(ex => `
-        <div class="mistake-example">
-          <div><span class="mistake-label">Toi :</span> ${escapeHtml(ex.original || '')}</div>
-          <div><span class="mistake-label">Correct :</span> ${escapeHtml(ex.corrected || '')}</div>
-          <div><span class="mistake-label">Pourquoi :</span> ${escapeHtml(ex.explanation || '')}</div>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
-}
+container.innerHTML = `
+  <div class="mistake-card">
+    <div class="mistake-title">Tes erreurs fréquentes</div>
+    <div class="mistake-count">Clique sur un type d’erreur pour lancer un exercice oral ciblé.</div>
+  </div>
+` + sorted.map(group => `
+  <div class="mistake-card" onclick="startMistakeExercise('${escapeHtml(group.type)}', '${escapeHtml(group.label)}')">
+    <div class="mistake-title">${escapeHtml(group.label)}</div>
+    <div class="mistake-count">${group.count} fois</div>
+    ${group.examples.map(ex => `
+      <div class="mistake-example">
+        <div><span class="mistake-label">Toi :</span> ${escapeHtml(ex.original || '')}</div>
+        <div><span class="mistake-label">Correct :</span> ${escapeHtml(ex.corrected || '')}</div>
+        <div><span class="mistake-label">Pourquoi :</span> ${escapeHtml(ex.explanation || '')}</div>
+      </div>
+    `).join('')}
+  </div>
+`).join('');
 
   window.currentPracticeMistakes = [];
 
+async function startMistakeExercise(type, label) {
+  exerciseMode = true;
+  currentExerciseType = type;
+  currentExerciseLabel = label || type;
+  currentExerciseQuestions = [];
+  currentExerciseIndex = 0;
+  currentExerciseQuestion = null;
+  currentExerciseAnswer = '';
+
+  const conversation = document.getElementById('conversation-screen');
+  const mistakes = document.getElementById('mistakes-screen');
+  const exercise = document.getElementById('exercise-screen');
+
+  conversation.style.display = 'none';
+  mistakes.style.display = 'none';
+  exercise.style.display = 'block';
+
+  try {
+    currentExerciseQuestions = await generateExerciseQuestions(type, label);
+    currentExerciseQuestion = currentExerciseQuestions[0] || null;
+    renderExerciseScreen();
+    if (currentExerciseQuestion?.question) {
+      speak(currentExerciseQuestion.question);
+    }
+  } catch (e) {
+    document.getElementById('exercise-content').innerHTML = `
+      <div class="exercise-card">
+        <div class="exercise-title">Erreur</div>
+        <div class="exercise-subtitle">${escapeHtml(e.message)}</div>
+        <div class="exercise-actions">
+          <button class="exercise-btn" onclick="backToMistakes()">Retour</button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+async function generateExerciseQuestions(type, label) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: `
+Tu crées un mini exercice oral de français.
+
+L'utilisateur doit pratiquer spécifiquement ce type d'erreur :
+type: ${type}
+label: ${label}
+
+Règles :
+- Réponds uniquement en JSON valide
+- Donne 5 questions courtes et naturelles
+- Chaque question doit pousser l'utilisateur à répondre en utilisant ce point précis
+- Niveau adapté à : ${level}
+- Les questions doivent être concrètes, simples et parlées
+- Pas d'explications longues
+
+Format exact :
+[
+  {
+    "question": "...",
+    "focus": "..."
+  }
+]
+`
+        }
+      ],
+      temperature: 0.7
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error?.message || 'API error');
+  }
+
+  const data = await res.json();
+  const raw = data.choices[0].message.content.trim();
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error('Questions exercice invalides');
+  }
+}
+
+function renderExerciseScreen(feedback = null) {
+  const container = document.getElementById('exercise-content');
+  if (!container) return;
+
+  if (!currentExerciseQuestion) {
+    container.innerHTML = `
+      <div class="exercise-card">
+        <div class="exercise-title">Exercice terminé</div>
+        <div class="exercise-subtitle">Tu as terminé cette série.</div>
+        <div class="exercise-actions">
+          <button class="exercise-btn" onclick="backToMistakes()">Retour aux erreurs</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="exercise-card">
+      <div class="exercise-title">${escapeHtml(currentExerciseLabel)}</div>
+      <div class="exercise-progress">Question ${currentExerciseIndex + 1} / ${currentExerciseQuestions.length}</div>
+      <div class="exercise-subtitle">${escapeHtml(currentExerciseQuestion.focus || '')}</div>
+      <div class="exercise-question">${escapeHtml(currentExerciseQuestion.question || '')}</div>
+
+      ${
+        currentExerciseAnswer
+          ? `<div class="exercise-answer"><strong>Ta réponse :</strong><br>${escapeHtml(currentExerciseAnswer)}</div>`
+          : ''
+      }
+
+      ${
+        feedback
+          ? `<div class="exercise-feedback">
+              <strong>Corrigé :</strong><br>${escapeHtml(feedback.corrected || '')}<br><br>
+              <strong>Pourquoi :</strong><br>${escapeHtml(feedback.short_feedback || '')}
+            </div>`
+          : ''
+      }
+
+      <div class="exercise-actions">
+        <button class="exercise-btn" onclick="speak(currentExerciseQuestion.question)">🔊 Réécouter</button>
+        <button class="exercise-btn" onclick="startExerciseAnswer()">🎤 Répondre</button>
+        ${
+          feedback
+            ? `<button class="exercise-btn" onclick="nextExerciseQuestion()">Question suivante</button>`
+            : ''
+        }
+        <button class="exercise-btn" onclick="backToMistakes()">Retour</button>
+      </div>
+    </div>
+  `;
+}
+
+function backToMistakes() {
+  exerciseMode = false;
+  currentExerciseType = null;
+  currentExerciseLabel = '';
+  currentExerciseQuestions = [];
+  currentExerciseIndex = 0;
+  currentExerciseQuestion = null;
+  currentExerciseAnswer = '';
+
+  document.getElementById('exercise-screen').style.display = 'none';
+  document.getElementById('mistakes-screen').style.display = 'block';
+  document.getElementById('conversation-screen').style.display = 'none';
+
+  renderMistakesScreen();
+}
+
+function nextExerciseQuestion() {
+  currentExerciseIndex += 1;
+  currentExerciseAnswer = '';
+
+  if (currentExerciseIndex >= currentExerciseQuestions.length) {
+    currentExerciseQuestion = null;
+    renderExerciseScreen();
+    return;
+  }
+
+  currentExerciseQuestion = currentExerciseQuestions[currentExerciseIndex];
+  renderExerciseScreen();
+  if (currentExerciseQuestion?.question) {
+    speak(currentExerciseQuestion.question);
+  }
+}
+  
 function startMistakePractice() {
   const container = document.getElementById('mistakes-content');
   const backBtn = document.getElementById('back-to-mistakes-btn');
@@ -2388,6 +2676,10 @@ saveSession(analysis);
   return (a + ' ' + b).trim();
 }
 function listenForUser() {
+
+    if (exerciseMode) {
+    return listenForExerciseAnswer();
+  }
   if (!conversationActive || isBusy) return;
 
   if (isAssistantSpeaking || Date.now() < blockListeningUntil) {
@@ -2497,6 +2789,131 @@ recognition.onresult = (e) => {
       recognition.start();
     }
 
+function startExerciseAnswer() {
+  if (!exerciseMode || !currentExerciseQuestion) return;
+  listenForExerciseAnswer();
+}
+
+function listenForExerciseAnswer() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+
+  stopRecognition();
+  setLiveTranscript('');
+
+  recognition = new SR();
+  recognition.lang = 'fr-FR';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+
+  let finalText = '';
+
+  recognition.onstart = () => {
+    isRecording = true;
+    setState('listening');
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '';
+
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const piece = e.results[i][0].transcript.trim();
+      if (!piece) continue;
+
+      if (e.results[i].isFinal) {
+        finalText = mergeTranscript(finalText, piece);
+      } else {
+        interim = mergeTranscript(interim, piece);
+      }
+    }
+
+    setLiveTranscript(mergeTranscript(finalText, interim));
+  };
+
+  recognition.onend = async () => {
+    isRecording = false;
+    setState('thinking');
+
+    const answer = (finalText || '').trim();
+    if (!answer) {
+      renderExerciseScreen();
+      return;
+    }
+
+    currentExerciseAnswer = answer;
+    const feedback = await evaluateExerciseAnswer(answer);
+    renderExerciseScreen(feedback);
+  };
+
+  recognition.onerror = () => {
+    isRecording = false;
+    setState('idle');
+    renderExerciseScreen();
+  };
+
+  recognition.start();
+}
+
+async function evaluateExerciseAnswer(answerText) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: `
+Tu corriges une réponse de français dans un exercice oral.
+
+Type d’erreur travaillé : ${currentExerciseType}
+Label : ${currentExerciseLabel}
+Question : ${currentExerciseQuestion?.question || ''}
+
+Règles :
+- Réponds uniquement en JSON valide
+- Corrige la réponse en restant le plus proche possible de l’original
+- Donne une explication courte et concrète
+- Pas de texte hors JSON
+
+Format exact :
+{
+  "corrected": "...",
+  "short_feedback": "..."
+}
+`
+        },
+        {
+          role: 'user',
+          content: answerText
+        }
+      ],
+      temperature: 0.2
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error?.message || 'API error');
+  }
+
+  const data = await res.json();
+  const raw = data.choices[0].message.content.trim();
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {
+      corrected: answerText,
+      short_feedback: "Réponse reçue, mais le retour n’a pas pu être analysé correctement."
+    };
+  }
+}
+  
     function endConversation() {
       conversationActive = false;
       isBusy = false;

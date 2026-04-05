@@ -1244,7 +1244,23 @@
 
         resetCurrentUserTurn();
         sophieTurn();
-      }, pauseSecs * 1000);
+      }, const effectivePauseSecs = pauseSecs === 0 ? 0.8 : pauseSecs;
+
+replyDelayTimer = setTimeout(() => {
+  if (!conversationActive) return;
+
+  const finalText = currentUserTurnText.trim();
+  if (!finalText) return;
+
+  stopRecognition();
+  isRecording = false;
+
+  addMsg(finalText, 'user');
+  history.push({ role: 'user', content: finalText });
+
+  resetCurrentUserTurn();
+  sophieTurn();
+}, effectivePauseSecs * 1000);;
     }
 
 function speak(text, onDone) {

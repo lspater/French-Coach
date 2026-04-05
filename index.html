@@ -848,6 +848,10 @@
     let level = 'beginner';
     let pauseSecs = 6;
 
+    let isSpeakingNow = false;
+    let lastSpokenText = '';
+    let lastSpokenAt = 0;
+
     let voiceRate = 0.88;
     let voicePitch = 1.05;
 
@@ -1244,20 +1248,36 @@
       }, pauseSecs * 1000);
     }
 
-    function speak(text, onDone) {
-  synth.cancel();
-
+function speak(text, onDone) {
   const lines = text.split('\n');
 
   const spokenLines = lines.filter(line => {
     const t = line.trim().toLowerCase();
     if (!t) return false;
-    if (t.startsWith('(') && t.endsWith(')')) return false; // geen Engelse vertaling
-    if (t.includes('petit conseil')) return false; // geen correctieregel uitspreken
+    if (t.startsWith('(') && t.endsWith(')')) return false;
+    if (t.includes('petit conseil')) return false;
     return true;
   });
 
   const clean = spokenLines.join(' ').replace(/\s+/g, ' ').trim();
+  if (!clean) {
+    if (onDone) onDone();
+    return;
+  }
+
+  const now = Date.now();
+
+  if (isSpeakingNow) return;
+
+  if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
+    return;
+  }
+
+  isSpeakingNow = true;
+  lastSpokenText = clean;
+  lastSpokenAt = now;
+
+  synth.cancel();
 
   const utt = new SpeechSynthesisUtterance(clean);
 
@@ -1270,12 +1290,19 @@
     setState('speaking');
     setLiveTranscript('');
   };
-  utt.onend = () => { if (onDone) onDone(); };
-  utt.onerror = () => { if (onDone) onDone(); };
+
+  utt.onend = () => {
+    isSpeakingNow = false;
+    if (onDone) onDone();
+  };
+
+  utt.onerror = () => {
+    isSpeakingNow = false;
+    if (onDone) onDone();
+  };
 
   synth.speak(utt);
 }
-
     function beginConversation() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {

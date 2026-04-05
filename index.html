@@ -1261,7 +1261,7 @@ applyLevelDefaults();
     bubble.textContent = frLines.join(' ') || text;
     bw.appendChild(bubble);
     const replay = document.createElement('button');
-replay.className = 'replay-btn sophie';
+replay.className = 'replay-btn';
 replay.textContent = '🔊 Réécouter';
 replay.onclick = () => speak(frLines.join(' ') || text);
 bw.appendChild(replay);

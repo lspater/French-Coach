@@ -1509,11 +1509,7 @@ function escapeHtml(str) {
 
 function renderMistakesScreen() {
   const container = document.getElementById('mistakes-content');
-  const backBtn = document.getElementById('back-to-mistakes-btn');
   if (!container) return;
-
-  if (backBtn) backBtn.style.display = 'none';
-
   const mistakes = getStoredMistakes();
 
   if (!mistakes.length) {
@@ -1565,7 +1561,6 @@ container.innerHTML = `
   </div>
 `).join('');
 }
-  window.currentPracticeMistakes = [];
 
 async function startMistakeExercise(type, label) {
   exerciseMode = true;
@@ -2728,6 +2723,19 @@ function listenForExerciseAnswer() {
   recognition.start();
 }
 
+  async function evaluateExerciseAnswer(answerText) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+  
 content: `
 Tu corriges une réponse de français dans un exercice oral.
 

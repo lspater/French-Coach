@@ -1630,7 +1630,6 @@ function mergeTranscript(base, addition) {
       };
 
 recognition.onresult = (e) => {
-  recognition.onresult = (e) => {
   if (isAssistantSpeaking) return;
   if (Date.now() < blockListeningUntil) return;
   

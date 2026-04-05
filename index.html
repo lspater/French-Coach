@@ -782,14 +782,14 @@
 
       <div class="setting-group">
         <span class="setting-label">Thinking time</span>
-        <input type="range" id="pause-slider" min="0" max="6" value="1" step="0.5" oninput="updatePause(this.value)">        <span id="pause-label">1s</span>
+        <input type="range" id="pause-slider" min="0" max="6" value="1" step="0.5" oninput="updatePause(this.value)">        <span id="pause-label">1.0s</span>
       </div>
 
       <div class="sep"></div>
 
       <div class="setting-group">
         <span class="setting-label">Voice speed</span>
-        <input type="range" id="rate-slider" min="0.70" max="1.40" value="1" step="0.01" oninput="updateRate(this.value)">        <span id="rate-label">0.88</span>
+        <input type="range" id="rate-slider" min="0.70" max="1.40" value="1" step="0.01" oninput="updateRate(this.value)">        <span id="rate-label">1.00</span>
       </div>
 
       <div class="sep"></div>
@@ -1775,6 +1775,7 @@ recognition.onresult = (e) => {
         showApp();
       }
 
+      updatePause(document.getElementById('pause-slider').value);
       updateRate(document.getElementById('rate-slider').value);
       updatePitch(document.getElementById('pitch-slider').value);
       pickVoice();

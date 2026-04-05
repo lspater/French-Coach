@@ -1018,8 +1018,9 @@
     }
 
     function updatePause(v) {
-      pauseSecs = parseInt(v, 10);
-      document.getElementById('pause-label').textContent = `${v}s`;
+  pauseSecs = parseFloat(v);
+  const label = pauseSecs === 0 ? 'fast' : Number(v).toFixed(1) + 's';
+  document.getElementById('pause-label').textContent = label;
     }
 
     function addMsg(text, role) {
@@ -1228,7 +1229,7 @@
       if (!currentUserTurnText.trim()) return;
 
       clearReplyTimer();
-      showCountdown(pauseSecs);
+      showCountdown(effectivePauseSecs);
 
       replyDelayTimer = setTimeout(() => {
         if (!conversationActive) return;

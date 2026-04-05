@@ -1511,7 +1511,7 @@ bw.appendChild(replay);
       chat.scrollTop = chat.scrollHeight;
     }
 
-    async function fetchUserCorrections() {
+ async function fetchUserCorrections() {
   const userMessages = history.filter(msg => msg.role === 'user');
   if (!userMessages.length) return;
 
@@ -1573,7 +1573,10 @@ Format exact :
     throw new Error('Réponse de correction invalide');
   }
 
-      async function extractMistakesFromSession() {
+  applyCorrectionsToUserBubbles(corrections);
+}
+
+async function extractMistakesFromSession() {
   const userMessages = history.filter(msg => msg.role === 'user');
   if (!userMessages.length) return [];
 
@@ -1594,6 +1597,7 @@ Format exact :
 Analyse les phrases françaises de l'utilisateur.
 
 Réponds uniquement en JSON valide.
+Ne mets aucun texte avant ou après le JSON.
 Ignore les répétitions dues à la dictée ou au speech-to-text.
 Ignore les hésitations.
 N'invente pas de fautes.
@@ -1633,15 +1637,13 @@ Format exact :
 
   const data = await res.json();
   const raw = data.choices[0].message.content.trim();
+  console.log('RAW MISTAKES RESPONSE:', raw);
 
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error('Réponse JSON erreurs invalide');
+    throw new Error('Réponse JSON erreurs invalide: ' + raw);
   }
-}
-      
-  applyCorrectionsToUserBubbles(corrections);
 }
 function applyCorrectionsToUserBubbles(corrections) {
   if (!Array.isArray(corrections)) return;

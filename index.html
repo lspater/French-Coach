@@ -155,11 +155,12 @@
       background: var(--terracotta-dark);
     }
 
-    #main-app {
-      display: none;
-      flex-direction: column;
-      min-height: 100dvh;
-    }
+#main-app {
+  display: none;
+  flex-direction: column;
+  min-height: 100dvh;
+  height: 100dvh;
+}
 
     header {
       background: var(--warm-white);
@@ -837,14 +838,18 @@
   border-color: var(--terracotta);
 }
 
+#conversation-screen,
+#mistakes-screen {
+  flex: 1;
+  min-height: 0;
+}
+
 #conversation-screen {
   display: block;
-  min-height: 0;
 }
 
 #mistakes-screen {
   display: none;
-  flex: 1;
   overflow-y: auto;
   padding: 1.25rem;
 }
@@ -1036,7 +1041,7 @@
   </div>
 </div>
 
-<div id="mistakes-screen" style="display:none;">
+<div id="mistakes-screen">
   <div id="mistakes-content"></div>
 </div>
 

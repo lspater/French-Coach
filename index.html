@@ -1390,16 +1390,17 @@ function speak(text, onDone) {
 
   let finished = false;
 
-  const finishSpeaking = () => {
-    if (finished) return;
-    finished = true;
+const finishSpeaking = () => {
+  if (finished) return;
+  finished = true;
 
-    isSpeakingNow = false;
-    isAssistantSpeaking = false;
-    blockListeningUntil = Date.now() + 800;
+  isSpeakingNow = false;
+  isAssistantSpeaking = false;
+  blockListeningUntil = Date.now() + 800;
+  setState('thinking');
 
-    if (onDone) onDone();
-  };
+  if (onDone) onDone();
+};
 
   // failsafe: als browser geen nette onend geeft
   const fallbackMs = Math.max(2500, clean.length * 90);
@@ -1620,12 +1621,21 @@ function mergeTranscript(base, addition) {
 
   return (a + ' ' + b).trim();
 }
-  function listenForUser() {
+function listenForUser() {
   if (!conversationActive || isBusy) return;
-  if (isAssistantSpeaking) return;
-  if (Date.now() < blockListeningUntil) return;
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) return;
+
+  if (isAssistantSpeaking || Date.now() < blockListeningUntil) {
+    clearRecognitionRestartTimer();
+    recognitionRestartTimer = setTimeout(() => {
+      if (conversationActive && !isBusy) {
+        listenForUser();
+      }
+    }, 300);
+    return;
+  }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
 
       clearRecognitionRestartTimer();
       stopRecognition();

@@ -299,11 +299,24 @@
       cursor: pointer;
     }
 
-    #pause-label {
+    #pause-label,
+    #rate-label,
+    #pitch-label {
       font-size: 12px;
       font-weight: 500;
       color: var(--ink-soft);
-      min-width: 20px;
+      min-width: 34px;
+    }
+
+    #voice-select {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--warm-white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: var(--ink);
+      max-width: 220px;
     }
 
     #chat {
@@ -612,7 +625,7 @@
 
     #live-transcript {
       min-height: 20px;
-      max-width: 320px;
+      max-width: 360px;
       text-align: center;
       font-size: 13px;
       color: var(--ink-soft);
@@ -734,11 +747,36 @@
           <button class="pill" onclick="setLevel('advanced', this)">Avancé</button>
         </div>
       </div>
+
       <div class="sep"></div>
+
       <div class="setting-group">
         <span class="setting-label">Thinking time</span>
         <input type="range" id="pause-slider" min="2" max="15" value="6" step="1" oninput="updatePause(this.value)">
         <span id="pause-label">6s</span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="setting-group">
+        <span class="setting-label">Voice speed</span>
+        <input type="range" id="rate-slider" min="0.70" max="1.15" value="0.88" step="0.01" oninput="updateRate(this.value)">
+        <span id="rate-label">0.88</span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="setting-group">
+        <span class="setting-label">Voice tone</span>
+        <input type="range" id="pitch-slider" min="0.80" max="1.30" value="1.05" step="0.01" oninput="updatePitch(this.value)">
+        <span id="pitch-label">1.05</span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="setting-group">
+        <span class="setting-label">Voice</span>
+        <select id="voice-select" onchange="updateVoice(this.value)"></select>
       </div>
     </div>
 
@@ -810,6 +848,9 @@
     let level = 'beginner';
     let pauseSecs = 6;
 
+    let voiceRate = 0.88;
+    let voicePitch = 1.05;
+
     let history = [];
     let recognition = null;
 
@@ -819,6 +860,8 @@
 
     let synth = window.speechSynthesis;
     let frVoice = null;
+    let availableVoices = [];
+    let selectedVoiceName = '';
 
     let replyDelayTimer = null;
     let countdownInterval = null;
@@ -829,21 +872,78 @@
     let manuallyStoppingRecognition = false;
     let userTurnActive = false;
 
+    function populateVoiceSelect() {
+      const select = document.getElementById('voice-select');
+      if (!select) return;
+
+      select.innerHTML = '';
+
+      if (!availableVoices.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No French voices found';
+        select.appendChild(option);
+        return;
+      }
+
+      availableVoices.forEach(voice => {
+        const option = document.createElement('option');
+        option.value = voice.name;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        if (voice.name === selectedVoiceName) option.selected = true;
+        select.appendChild(option);
+      });
+    }
+
     function pickVoice() {
       const voices = synth.getVoices();
-      const fr = voices.filter(v => v.lang.startsWith('fr'));
-      const femaleNames = [
+      availableVoices = voices.filter(v => v.lang && v.lang.startsWith('fr'));
+
+      if (!availableVoices.length) {
+        frVoice = null;
+        populateVoiceSelect();
+        return;
+      }
+
+      if (selectedVoiceName) {
+        const selected = availableVoices.find(v => v.name === selectedVoiceName);
+        if (selected) {
+          frVoice = selected;
+          populateVoiceSelect();
+          return;
+        }
+      }
+
+      const preferredNames = [
         'amelie','audrey','aurelie','claire','elodie','fanny','florence',
         'helene','isabelle','julie','lea','lucie','marie','nathalie',
         'pauline','sandrine','sophie','sylvie','valerie','virginie',
         'alice','camille'
       ];
 
-      let v = fr.find(v => femaleNames.some(n => v.name.toLowerCase().includes(n)));
-      if (!v) v = fr.find(v => !v.name.toLowerCase().includes('thomas'));
-      if (!v) v = fr[0] || null;
+      let v = availableVoices.find(v => preferredNames.some(n => v.name.toLowerCase().includes(n)));
+      if (!v) v = availableVoices.find(v => !v.name.toLowerCase().includes('thomas'));
+      if (!v) v = availableVoices[0];
 
       frVoice = v;
+      selectedVoiceName = v.name;
+      populateVoiceSelect();
+    }
+
+    function updateVoice(name) {
+      selectedVoiceName = name;
+      const selected = availableVoices.find(v => v.name === name);
+      if (selected) frVoice = selected;
+    }
+
+    function updateRate(v) {
+      voiceRate = parseFloat(v);
+      document.getElementById('rate-label').textContent = Number(v).toFixed(2);
+    }
+
+    function updatePitch(v) {
+      voicePitch = parseFloat(v);
+      document.getElementById('pitch-label').textContent = Number(v).toFixed(2);
     }
 
     function setLiveTranscript(text = '') {
@@ -865,9 +965,11 @@
     }
 
     const systemPrompts = {
-      beginner: `You are Sophie, a warm and patient French conversation tutor for absolute beginners. Rules: Always write French first, then English translation in parentheses on the next line. Keep sentences very short (A1-A2). Always end with ONE simple question. If you correct something, do it only in French, naturally, using: "Petit conseil : on dit ...". Do not add any English explanation for corrections. Topics: greetings, name, family, food, colors, numbers, weather. Max 3 sentences.`,
-      intermediate: `You are Sophie, a friendly French conversation coach for intermediate learners (B1-B2). Rules: Write primarily in French; English only for translations if really needed. End every reply with ONE engaging question. Correct errors naturally, using French only, with "Petit conseil : on dit ...". Do not add English correction text. Use passé composé, imparfait, futur proche naturally. Topics: travel, food, culture, opinions, weekend, work. Max 4 sentences.`,
-      advanced: `You are Sophie, a sophisticated French conversation partner for advanced learners (C1-C2). Rules: Write entirely in French. Correct only significant errors subtly and in French only. Ask one intellectually stimulating open-ended question per reply. Use rich vocabulary, idioms, subjunctive. Topics: philosophy, literature, current events, cinema, politics, art. Max 5 sentences.`
+      beginner: `You are Sophie, a warm and patient French conversation tutor for absolute beginners. Always reply mainly in simple French, with English translations in parentheses only when helpful. First react naturally to what the user just said. Stay on their topic instead of jumping to a new one. If they make a mistake, correct it gently in French only, using exactly this style: "Petit conseil : on dit ...". Do not add any English explanation for corrections. Do not force a new question in every reply. Sometimes just react, reformulate, or encourage the user to continue. Keep it natural and calm. Use very short sentences (A1-A2). Max 4 short sentences.`,
+
+      intermediate: `You are Sophie, a friendly French conversation coach for intermediate learners (B1-B2). React naturally to the user's actual message before moving the conversation forward. Stay with their topic and expand on it instead of constantly switching to a new question. Correct mistakes gently in French only, using "Petit conseil : on dit ...". Do not add English correction text. Do not force a question every turn. Sometimes respond with a comment, reformulation, or follow-up tied closely to what the user said. Keep the conversation natural and human. Max 5 sentences.`,
+
+      advanced: `You are Sophie, a natural and thoughtful French conversation partner for advanced learners (C1-C2). Respond to the substance of what the user said before steering the conversation further. Stay on topic, develop ideas, and avoid sounding like a questionnaire. Correct only meaningful mistakes, subtly and in French only. Do not force a question in every reply. Keep the conversation natural, nuanced, and engaging. Max 6 sentences.`
     };
 
     function saveKey() {
@@ -1150,8 +1252,8 @@
 
       if (frVoice) utt.voice = frVoice;
       utt.lang = 'fr-FR';
-      utt.rate = 0.88;
-      utt.pitch = 1.1;
+      utt.rate = voiceRate;
+      utt.pitch = voicePitch;
 
       utt.onstart = () => {
         setState('speaking');
@@ -1199,7 +1301,7 @@
 
       const starters = {
         beginner: "Bonjour ! Je m'appelle Sophie.\n(Hello! My name is Sophie.)\nJe suis ta professeure de français.\n(I am your French teacher.)\nComment tu t'appelles ?\n(What is your name?)",
-        intermediate: "Bonjour ! Je suis Sophie, ta coach de conversation française. Je suis ravie de pratiquer avec toi aujourd'hui. Alors, qu'est-ce que tu as fait ce week-end ?",
+        intermediate: "Bonjour ! Je suis Sophie, ta coach de conversation française. Je suis ravie de pratiquer avec toi aujourd'hui. Dis-moi, qu'est-ce que tu as fait ce week-end ?",
         advanced: "Bonjour ! Je suis Sophie, ta partenaire de conversation. Dis-moi, qu'est-ce qui t'a poussé à apprendre le français ? Y a-t-il un aspect de la culture française qui t'attire particulièrement ?"
       };
 
@@ -1423,6 +1525,10 @@
         apiKey = saved;
         showApp();
       }
+
+      updateRate(document.getElementById('rate-slider').value);
+      updatePitch(document.getElementById('pitch-slider').value);
+      pickVoice();
       setLiveTranscript('');
     });
   </script>

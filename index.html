@@ -1364,17 +1364,18 @@ function speak(text, onDone) {
 
   const now = Date.now();
 
-if (isSpeakingNow) {
-  if (onDone) onDone();
-  return;
-}
+  if (isSpeakingNow) {
+    if (onDone) onDone();
+    return;
+  }
 
-if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
-  if (onDone) onDone();
-  return;
-}
+  if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
+    if (onDone) onDone();
+    return;
+  }
 
   isSpeakingNow = true;
+  isAssistantSpeaking = true;
   lastSpokenText = clean;
   lastSpokenAt = now;
 
@@ -1387,26 +1388,41 @@ if (clean === lastSpokenText && (now - lastSpokenAt) < 2000) {
   utt.rate = voiceRate;
   utt.pitch = voicePitch;
 
-utt.onstart = () => {
-  isAssistantSpeaking = true;
-  blockListeningUntil = Date.now() + 1200;
-  setState('speaking');
-  setLiveTranscript('');
-};
+  let finished = false;
 
-utt.onend = () => {
-  isSpeakingNow = false;
-  isAssistantSpeaking = false;
-  blockListeningUntil = Date.now() + 800;
-  if (onDone) onDone();
-};
+  const finishSpeaking = () => {
+    if (finished) return;
+    finished = true;
 
-utt.onerror = () => {
-  isSpeakingNow = false;
-  isAssistantSpeaking = false;
-  blockListeningUntil = Date.now() + 800;
-  if (onDone) onDone();
-};
+    isSpeakingNow = false;
+    isAssistantSpeaking = false;
+    blockListeningUntil = Date.now() + 800;
+
+    if (onDone) onDone();
+  };
+
+  // failsafe: als browser geen nette onend geeft
+  const fallbackMs = Math.max(2500, clean.length * 90);
+
+  const fallbackTimer = setTimeout(() => {
+    finishSpeaking();
+  }, fallbackMs);
+
+  utt.onstart = () => {
+    setState('speaking');
+    setLiveTranscript('');
+    blockListeningUntil = Date.now() + 1200;
+  };
+
+  utt.onend = () => {
+    clearTimeout(fallbackTimer);
+    finishSpeaking();
+  };
+
+  utt.onerror = () => {
+    clearTimeout(fallbackTimer);
+    finishSpeaking();
+  };
 
   synth.speak(utt);
 }
@@ -1710,6 +1726,9 @@ recognition.onresult = (e) => {
       isBusy = false;
       isRecording = false;
       manuallyStoppingRecognition = true;
+      isAssistantSpeaking = false;
+      isSpeakingNow = false;
+      blockListeningUntil = 0;
 
       clearReplyTimer();
       clearRecognitionRestartTimer();

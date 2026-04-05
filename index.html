@@ -893,6 +893,65 @@
   color: var(--ink);
 }
 
+    #mistakes-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.review-btn {
+  padding: 8px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.review-btn:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+.practice-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+
+.practice-title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  color: var(--terracotta-dark);
+  margin-bottom: 8px;
+}
+
+.practice-line {
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.practice-label {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.practice-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+    
   </style>
 </head>
 <body>
@@ -1040,9 +1099,21 @@
     </div>
   </div>
 
-  <div id="mistakes-screen">
-    <div id="mistakes-content"></div>
+<div id="mistakes-screen">
+  <div id="mistakes-actions">
+    <button class="review-btn" onclick="startMistakePractice()">Réviser</button>
+    <button
+      class="review-btn"
+      id="back-to-mistakes-btn"
+      onclick="renderMistakesScreen()"
+      style="display:none;"
+    >
+      Retour
+    </button>
   </div>
+
+  <div id="mistakes-content"></div>
+</div>
 </div>
 
   
@@ -1350,9 +1421,117 @@ function renderMistakesScreen() {
   if (backBtn) backBtn.style.display = 'none';
 
   const mistakes = getStoredMistakes();
-  ...
+
+  if (!mistakes.length) {
+    container.innerHTML = `
+      <div class="mistake-card">
+        <div class="mistake-title">Pas encore d’erreurs enregistrées</div>
+        <div class="mistake-count">Fais d’abord une conversation, puis une analyse.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const grouped = {};
+
+  mistakes.forEach(m => {
+    if (!grouped[m.type]) {
+      grouped[m.type] = {
+        label: m.label || m.type,
+        count: 0,
+        examples: []
+      };
+    }
+
+    grouped[m.type].count += 1;
+
+    if (grouped[m.type].examples.length < 3) {
+      grouped[m.type].examples.push(m);
+    }
+  });
+
+  const sorted = Object.values(grouped).sort((a, b) => b.count - a.count);
+
+  container.innerHTML = sorted.map(group => `
+    <div class="mistake-card">
+      <div class="mistake-title">${escapeHtml(group.label)}</div>
+      <div class="mistake-count">${group.count} fois</div>
+      ${group.examples.map(ex => `
+        <div class="mistake-example">
+          <div><span class="mistake-label">Toi :</span> ${escapeHtml(ex.original || '')}</div>
+          <div><span class="mistake-label">Correct :</span> ${escapeHtml(ex.corrected || '')}</div>
+          <div><span class="mistake-label">Pourquoi :</span> ${escapeHtml(ex.explanation || '')}</div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
 }
 
+  window.currentPracticeMistakes = [];
+
+function startMistakePractice() {
+  const container = document.getElementById('mistakes-content');
+  const backBtn = document.getElementById('back-to-mistakes-btn');
+  const mistakes = getStoredMistakes();
+
+  if (!container) return;
+
+  if (!mistakes.length) {
+    container.innerHTML = `
+      <div class="mistake-card">
+        <div class="mistake-title">Pas encore d’erreurs à réviser</div>
+        <div class="mistake-count">Fais d’abord une conversation et une analyse.</div>
+      </div>
+    `;
+    return;
+  }
+
+  if (backBtn) backBtn.style.display = 'inline-block';
+
+  const recentMistakes = mistakes.slice(0, 15);
+  window.currentPracticeMistakes = recentMistakes;
+
+  container.innerHTML = recentMistakes.map((item, index) => `
+    <div class="practice-card">
+      <div class="practice-title">${escapeHtml(item.label || 'Erreur')}</div>
+
+      <div class="practice-line">
+        <span class="practice-label">Ta phrase :</span><br>
+        ${escapeHtml(item.original || '')}
+      </div>
+
+      <div class="practice-line">
+        <span class="practice-label">Version correcte :</span><br>
+        ${escapeHtml(item.corrected || '')}
+      </div>
+
+      <div class="practice-line">
+        <span class="practice-label">Pourquoi :</span><br>
+        ${escapeHtml(item.explanation || '')}
+      </div>
+
+      <div class="practice-actions">
+        <button class="review-btn" onclick="playPracticeCorrection(${index})">🔊 Écouter</button>
+        <button class="review-btn" onclick="repeatPracticeCorrection(${index})">🎤 Répéter</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function playPracticeCorrection(index) {
+  const item = window.currentPracticeMistakes[index];
+  if (!item || !item.corrected) return;
+  speak(item.corrected);
+}
+
+function repeatPracticeCorrection(index) {
+  const item = window.currentPracticeMistakes[index];
+  if (!item || !item.corrected) return;
+
+  speak(item.corrected, () => {
+    alert("Répète cette phrase :\n\n" + item.corrected);
+  });
+}
   function startMistakePractice() {
   const container = document.getElementById('mistakes-content');
   const backBtn = document.getElementById('back-to-mistakes-btn');
@@ -2420,64 +2599,6 @@ pickVoice();
 setLiveTranscript('');
     });
 
-  #mistakes-actions {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-
-.review-btn {
-  padding: 8px 12px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: var(--cream);
-  color: var(--ink);
-  font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.review-btn:hover {
-  border-color: var(--terracotta);
-  color: var(--terracotta);
-}
-
-.practice-card {
-  background: var(--warm-white);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: var(--shadow);
-  margin-bottom: 12px;
-}
-
-.practice-title {
-  font-family: 'Fraunces', serif;
-  font-size: 18px;
-  color: var(--terracotta-dark);
-  margin-bottom: 8px;
-}
-
-.practice-line {
-  font-size: 14px;
-  color: var(--ink-soft);
-  margin-bottom: 8px;
-  line-height: 1.5;
-}
-
-.practice-label {
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.practice-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
   </script>
 </body>
 </html>

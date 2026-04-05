@@ -1245,25 +1245,36 @@
     }
 
     function speak(text, onDone) {
-      synth.cancel();
+  synth.cancel();
 
-      const clean = text.replace(/\([^)]*\)/g, '').replace(/\n+/g, ' ').trim();
-      const utt = new SpeechSynthesisUtterance(clean);
+  const lines = text.split('\n');
 
-      if (frVoice) utt.voice = frVoice;
-      utt.lang = 'fr-FR';
-      utt.rate = voiceRate;
-      utt.pitch = voicePitch;
+  const spokenLines = lines.filter(line => {
+    const t = line.trim().toLowerCase();
+    if (!t) return false;
+    if (t.startsWith('(') && t.endsWith(')')) return false; // geen Engelse vertaling
+    if (t.includes('petit conseil')) return false; // geen correctieregel uitspreken
+    return true;
+  });
 
-      utt.onstart = () => {
-        setState('speaking');
-        setLiveTranscript('');
-      };
-      utt.onend = () => { if (onDone) onDone(); };
-      utt.onerror = () => { if (onDone) onDone(); };
+  const clean = spokenLines.join(' ').replace(/\s+/g, ' ').trim();
 
-      synth.speak(utt);
-    }
+  const utt = new SpeechSynthesisUtterance(clean);
+
+  if (frVoice) utt.voice = frVoice;
+  utt.lang = 'fr-FR';
+  utt.rate = voiceRate;
+  utt.pitch = voicePitch;
+
+  utt.onstart = () => {
+    setState('speaking');
+    setLiveTranscript('');
+  };
+  utt.onend = () => { if (onDone) onDone(); };
+  utt.onerror = () => { if (onDone) onDone(); };
+
+  synth.speak(utt);
+}
 
     function beginConversation() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

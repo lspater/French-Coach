@@ -1422,33 +1422,33 @@ function speak(text, onDone) {
         setState('listening');
       };
 
-      recognition.onresult = (e) => {
-        let interimTranscript = '';
-        let newFinalText = '';
+recognition.onresult = (e) => {
+  let finalParts = [];
+  let interimParts = [];
 
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const piece = e.results[i][0].transcript;
+  for (let i = 0; i < e.results.length; i++) {
+    const piece = e.results[i][0].transcript.trim();
+    if (!piece) continue;
 
-          if (e.results[i].isFinal) {
-            newFinalText += piece + ' ';
-          } else {
-            interimTranscript += piece + ' ';
-          }
-        }
+    if (e.results[i].isFinal) {
+      finalParts.push(piece);
+    } else {
+      interimParts.push(piece);
+    }
+  }
 
-        if (newFinalText.trim()) {
-          currentUserTurnFinal = (currentUserTurnFinal + ' ' + newFinalText).trim();
-        }
+  // Bouw transcript opnieuw op vanuit de volledige huidige recognizer-state
+  currentUserTurnFinal = finalParts.join(' ').trim();
+  const interimTranscript = interimParts.join(' ').trim();
+  currentUserTurnText = [currentUserTurnFinal, interimTranscript].filter(Boolean).join(' ').trim();
 
-        currentUserTurnText = (currentUserTurnFinal + ' ' + interimTranscript).trim();
+  setLiveTranscript(currentUserTurnText);
 
-        setLiveTranscript(currentUserTurnText);
-
-        if (currentUserTurnText) {
-          scheduleSophieReply();
-          setState('listening');
-        }
-      };
+  if (currentUserTurnText) {
+    scheduleSophieReply();
+    setState('listening');
+  }
+};
 
       recognition.onerror = (e) => {
         isRecording = false;

@@ -808,10 +808,12 @@ let replyDelayTimer = null;
 let countdownInterval = null;
 let recognitionRestartTimer = null;
 
-let latestTranscript = '';
-let finalizedTranscript = '';
+let currentUserTurnText = '';
+let currentUserTurnFinal = '';
 let manuallyStoppingRecognition = false;
+let userTurnActive = false;
 
+// Pick best available French female voice
 function pickVoice() {
   const voices = synth.getVoices();
   const fr = voices.filter(v => v.lang.startsWith('fr'));
@@ -828,7 +830,6 @@ function pickVoice() {
 
   frVoice = v;
 }
-
 pickVoice();
 if (speechSynthesis.onvoiceschanged !== undefined) {
   speechSynthesis.onvoiceschanged = pickVoice;
@@ -1073,9 +1074,21 @@ function stopRecognition() {
   }
 }
 
+function resetCurrentUserTurn() {
+  currentUserTurnText = '';
+  currentUserTurnFinal = '';
+  userTurnActive = false;
+}
+
+function beginCurrentUserTurn() {
+  currentUserTurnText = '';
+  currentUserTurnFinal = '';
+  userTurnActive = true;
+}
+
 function scheduleSophieReply() {
   if (!conversationActive) return;
-  if (!latestTranscript.trim()) return;
+  if (!currentUserTurnText.trim()) return;
 
   clearReplyTimer();
   showCountdown(pauseSecs);
@@ -1083,7 +1096,7 @@ function scheduleSophieReply() {
   replyDelayTimer = setTimeout(() => {
     if (!conversationActive) return;
 
-    const finalText = latestTranscript.trim();
+    const finalText = currentUserTurnText.trim();
     if (!finalText) return;
 
     stopRecognition();
@@ -1092,9 +1105,7 @@ function scheduleSophieReply() {
     addMsg(finalText, 'user');
     history.push({ role: 'user', content: finalText });
 
-    latestTranscript = '';
-    finalizedTranscript = '';
-
+    resetCurrentUserTurn();
     sophieTurn();
   }, pauseSecs * 1000);
 }
@@ -1126,12 +1137,11 @@ function beginConversation() {
   }
 
   conversationActive = true;
-  latestTranscript = '';
-  finalizedTranscript = '';
   manuallyStoppingRecognition = false;
 
   clearReplyTimer();
   clearRecognitionRestartTimer();
+  resetCurrentUserTurn();
 
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('live-screen').style.display = 'flex';
@@ -1147,6 +1157,7 @@ async function sophieTurn() {
   clearReplyTimer();
   clearRecognitionRestartTimer();
   stopRecognition();
+  resetCurrentUserTurn();
 
   isBusy = true;
   setState('thinking');
@@ -1204,6 +1215,7 @@ async function sophieTurn() {
   speak(reply, () => {
     isBusy = false;
     if (conversationActive) {
+      beginCurrentUserTurn();
       listenForUser();
     }
   });
@@ -1215,13 +1227,14 @@ function listenForUser() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
 
-  clearReplyTimer();
   clearRecognitionRestartTimer();
   stopRecognition();
 
-  latestTranscript = '';
-  finalizedTranscript = '';
   manuallyStoppingRecognition = false;
+
+  if (!userTurnActive) {
+    beginCurrentUserTurn();
+  }
 
   recognition = new SR();
   recognition.lang = 'fr-FR';
@@ -1249,14 +1262,14 @@ function listenForUser() {
     }
 
     if (newFinalText.trim()) {
-      finalizedTranscript = (finalizedTranscript + ' ' + newFinalText).trim();
+      currentUserTurnFinal = (currentUserTurnFinal + ' ' + newFinalText).trim();
     }
 
-    latestTranscript = (finalizedTranscript + ' ' + interimTranscript).trim();
+    currentUserTurnText = (currentUserTurnFinal + ' ' + interimTranscript).trim();
 
-    if (latestTranscript) {
-      setState('listening');
+    if (currentUserTurnText) {
       scheduleSophieReply();
+      setState('listening');
     }
   };
 
@@ -1274,10 +1287,10 @@ function listenForUser() {
     if (conversationActive && !isBusy) {
       clearRecognitionRestartTimer();
       recognitionRestartTimer = setTimeout(() => {
-        if (conversationActive && !isBusy && !latestTranscript.trim()) {
+        if (conversationActive && !isBusy) {
           listenForUser();
         }
-      }, 500);
+      }, 400);
     }
   };
 
@@ -1291,22 +1304,12 @@ function listenForUser() {
       return;
     }
 
-    if (latestTranscript.trim()) {
-      scheduleSophieReply();
-      clearRecognitionRestartTimer();
-      recognitionRestartTimer = setTimeout(() => {
-        if (conversationActive && !isBusy && !manuallyStoppingRecognition) {
-          listenForUser();
-        }
-      }, 250);
-    } else {
-      clearRecognitionRestartTimer();
-      recognitionRestartTimer = setTimeout(() => {
-        if (conversationActive && !isBusy) {
-          listenForUser();
-        }
-      }, 400);
-    }
+    clearRecognitionRestartTimer();
+    recognitionRestartTimer = setTimeout(() => {
+      if (conversationActive && !isBusy) {
+        listenForUser();
+      }
+    }, 150);
   };
 
   recognition.start();
@@ -1316,9 +1319,6 @@ function endConversation() {
   conversationActive = false;
   isBusy = false;
   isRecording = false;
-
-  latestTranscript = '';
-  finalizedTranscript = '';
   manuallyStoppingRecognition = true;
 
   clearReplyTimer();
@@ -1326,6 +1326,7 @@ function endConversation() {
 
   synth.cancel();
   stopRecognition();
+  resetCurrentUserTurn();
 
   document.getElementById('live-screen').style.display = 'none';
   document.getElementById('start-screen').style.display = 'flex';
@@ -1341,12 +1342,11 @@ function sendText() {
 
   if (!conversationActive) {
     conversationActive = true;
-    latestTranscript = '';
-    finalizedTranscript = '';
     manuallyStoppingRecognition = false;
 
     clearReplyTimer();
     clearRecognitionRestartTimer();
+    resetCurrentUserTurn();
 
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('live-screen').style.display = 'flex';
@@ -1359,6 +1359,7 @@ function sendText() {
   clearReplyTimer();
   clearRecognitionRestartTimer();
   stopRecognition();
+  resetCurrentUserTurn();
 
   isBusy = true;
   synth.cancel();

@@ -759,8 +759,7 @@
 
       <div class="setting-group">
         <span class="setting-label">Voice speed</span>
-        <input type="range" id="rate-slider" min="0.70" max="1.15" value="0.88" step="0.01" oninput="updateRate(this.value)">
-        <span id="rate-label">0.88</span>
+        <input type="range" id="rate-slider" min="0.70" max="1.40" value="1" step="0.01" oninput="updateRate(this.value)">        <span id="rate-label">0.88</span>
       </div>
 
       <div class="sep"></div>
@@ -851,8 +850,8 @@
     let lastSpokenText = '';
     let lastSpokenAt = 0;
 
-    let voiceRate = 0.88;
-    let voicePitch = 1.05;
+    let voiceRate = 1;
+    let voicePitch = 1;
 
     let history = [];
     let recognition = null;
@@ -1017,7 +1016,7 @@
       setLiveTranscript('');
     }
 
-    function updatePause(v) {
+      function updatePause(v) {
   pauseSecs = parseFloat(v);
   const label = pauseSecs === 0 ? 'fast' : Number(v).toFixed(1) + 's';
   document.getElementById('pause-label').textContent = label;
@@ -1224,11 +1223,12 @@
       setLiveTranscript('');
     }
 
-    function scheduleSophieReply() {
+function scheduleSophieReply() {
   if (!conversationActive) return;
   if (!currentUserTurnText.trim()) return;
 
-  const effectivePauseSecs = pauseSecs === 0 ? 0.8 : pauseSecs;
+  const minimumSpeechPause = 0.8;
+  const effectivePauseSecs = minimumSpeechPause + pauseSecs;
 
   clearReplyTimer();
   showCountdown(effectivePauseSecs);

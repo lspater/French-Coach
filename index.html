@@ -1332,9 +1332,9 @@ function pickVoice() {
     }
 function applyLevelDefaults() {
   const defaults = {
-    beginner: { rate: 1.15, pause: 0.5 },
-    intermediate: { rate: 1.10, pause: 1.5 },
-    advanced: { rate: 1.00, pause: 2.5 }
+    beginner: { rate: 1.15, pause: 1 },
+    intermediate: { rate: 1.10, pause: 2 },
+    advanced: { rate: 1.00, pause: 3 }
   };
 
   const current = defaults[level];
@@ -2354,15 +2354,23 @@ reply = options[Math.floor(Math.random() * options.length)];
               'Content-Type': 'application/json',
               'Authorization': 'Bearer ' + apiKey
             },
-            body: JSON.stringify({
-              model: 'llama-3.3-70b-versatile',
-              max_tokens: 150,
 const recentHistory = history.slice(-6);
 
-messages: [
-  { role: 'system', content: systemPrompts[level] },
-  ...recentHistory
-]            })
+const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + apiKey
+  },
+  body: JSON.stringify({
+    model: 'llama-3.3-70b-versatile',
+    max_tokens: 150,
+    messages: [
+      { role: 'system', content: systemPrompts[level] },
+      ...recentHistory
+    ]
+  })
+});
           });
 
           if (!res.ok) {
@@ -2410,7 +2418,7 @@ async function analyzeSession() {
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 220
+        max_tokens: 220,
         messages: [
           {
             role: 'system',

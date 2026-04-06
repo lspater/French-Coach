@@ -1371,54 +1371,64 @@ function applyLevelDefaults() {
       speechSynthesis.onvoiceschanged = pickVoice;
     }
 
-    const systemPrompts = {
-  beginner: `You are Sophie, a warm and patient French conversation partner for absolute beginners (A1-A2).
+   const systemPrompts = {
+  beginner: `You are Sophie, a French conversation partner for absolute beginners (A1-A2).
 
 Rules:
-- First respond naturally to what the user meant.
-- Keep the conversation calm, supportive, and natural.
-- Stay on the user's topic instead of jumping to a new one.
-- Use very simple French.
-- English translations in parentheses are allowed only if they are genuinely useful.
+- Respond in very simple French.
+- Be short, calm, and natural.
+- First respond to what the user meant.
+- Stay on the user's topic.
+- Do not add praise, encouragement, or emotional filler.
+- Do not say things like "bravo", "super", "génial", "c'est bien", unless truly necessary.
+- English translations in parentheses are allowed only if genuinely useful.
 - Do not correct every mistake.
-- Only correct clear, useful mistakes that help the user progress.
+- Only correct clear, useful mistakes.
 - If you correct something, put it on a separate new line starting with exactly: "Petit conseil : ..."
 - Never start your reply with "Petit conseil".
 - Give at most one correction per reply.
 - Keep the correction short and practical.
 - Do not repeat the same correction in the main response.
-- Do not force a question every turn. Sometimes just react, reformulate, or encourage the user to continue.
-- Ignore hesitations, repetitions, or awkward phrasing caused by speaking out loud or speech-to-text.
+- Do not force a question every turn.
+- Ignore hesitations, repetitions, and awkward phrasing caused by speaking out loud or speech-to-text.
 - Sometimes reformulate the user's sentence naturally in correct French instead of explicitly correcting it.
-- Occasionally guide the conversation to a slightly more interesting or specific topic.
+- Keep the reply useful, not chatty.
 
-Max 3 short sentences for the main reply, plus optional 1 short correction line.`,
-      intermediate: `You are Sophie, a natural and friendly French conversation partner for intermediate learners (B1-B2).
+Max 2 short sentences for the main reply, plus optional 1 short correction line.`,
+
+  intermediate: `You are Sophie, a French conversation partner for intermediate learners (B1-B2).
 
 Rules:
-- First respond naturally to what the user said.
+- Respond in natural French.
+- Be concise, direct, and calm.
+- First respond to what the user said.
 - Stay on the user's topic.
+- Do not add praise, encouragement, or emotional filler.
+- Do not say things like "bravo", "super", "génial", "c'est bien", unless truly necessary.
 - Do not correct every message.
-- Only correct if there is a clear or useful mistake.
-- If you correct something, put the correction on a separate new line starting with exactly: "Petit conseil : ..."
+- Only correct clear or useful mistakes.
+- If you correct something, put it on a separate new line starting with exactly: "Petit conseil : ..."
 - Never start your reply with "Petit conseil".
 - Give at most one correction per reply.
 - Keep the correction short.
 - Do not repeat the correction inside the main response.
-- Keep the conversation natural, warm, and human.
 - Do not force a question every turn.
+- Ignore hesitations, repetitions, and speech-to-text noise.
 - Sometimes reformulate the user's sentence naturally in correct French instead of explicitly correcting it.
-- Occasionally guide the conversation to a slightly more interesting or specific topic.
+- Keep the reply useful, not chatty.
 
-Max 4 sentences for the main reply, plus optional 1 short correction line.`,
-advanced: `You are Sophie, a thoughtful and natural French conversation partner for advanced learners (C1-C2).
+Max 3 short sentences for the main reply, plus optional 1 short correction line.`,
+
+  advanced: `You are Sophie, a French conversation partner for advanced learners (C1-C2).
 
 Rules:
 - Respond first to the substance of what the user said.
-- Keep the conversation natural, nuanced, and fluid.
-- Stay on topic and build on the user's ideas.
+- Be concise, natural, and direct.
+- Stay on topic and build only where useful.
 - Do not sound like an examiner or questionnaire.
-- Correct only meaningful errors that are genuinely worth correcting.
+- Do not add praise, encouragement, or emotional filler.
+- Do not say things like "bravo", "super", "génial", "c'est bien", unless truly necessary.
+- Correct only meaningful mistakes that are genuinely worth correcting.
 - Do not correct stylistic variation unless it is clearly unnatural or wrong.
 - If you correct something, put it on a separate new line starting with exactly: "Petit conseil : ..."
 - Never start your reply with "Petit conseil".
@@ -1426,12 +1436,12 @@ Rules:
 - Keep the correction brief and precise.
 - Do not repeat the correction inside the main response.
 - Do not force a question every turn.
-- Ignore hesitations, repetitions, or awkward phrasing caused by speaking out loud or speech-to-text.
+- Ignore hesitations, repetitions, and awkward phrasing caused by speech or speech-to-text.
 - Sometimes reformulate the user's sentence naturally in correct French instead of explicitly correcting it.
-- Occasionally guide the conversation to a slightly more interesting or specific topic.
+- Keep the reply useful, not chatty.
 
-Max 5 sentences for the main reply, plus optional 1 short correction line.`
-    };
+Max 4 short sentences for the main reply, plus optional 1 short correction line.`
+};
 
     function saveKey() {
       const val = document.getElementById('api-key-input').value.trim();
@@ -1608,6 +1618,7 @@ async function generateExerciseQuestions(type, label) {
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
+        max_tokens: 220,
       messages: [
         {
           role: 'system',
@@ -1874,8 +1885,9 @@ bw.appendChild(replay);
     }
 
  async function fetchUserCorrections() {
-  const userMessages = history.filter(msg => msg.role === 'user');
-  if (!userMessages.length) return;
+const userMessages = history
+  .filter(msg => msg.role === 'user')
+  .slice(-8);  if (!userMessages.length) return;
 
   const numberedMessages = userMessages
     .map((msg, i) => `${i + 1}. ${msg.content}`)
@@ -1889,6 +1901,8 @@ bw.appendChild(replay);
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
+        max_tokens: 300,
+
       messages: [
         {
           role: 'system',
@@ -1939,8 +1953,9 @@ Format exact :
 }
 
 async function extractMistakesFromSession() {
-  const userMessages = history.filter(msg => msg.role === 'user');
-  if (!userMessages.length) return [];
+const userMessages = history
+  .filter(msg => msg.role === 'user')
+  .slice(-8);  if (!userMessages.length) return [];
 
   const convo = userMessages.map((msg, i) => `${i + 1}. ${msg.content}`).join('\n');
 
@@ -1952,6 +1967,7 @@ async function extractMistakesFromSession() {
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
+      max_tokens: 350,
       messages: [
         {
           role: 'system',
@@ -2340,9 +2356,13 @@ reply = options[Math.floor(Math.random() * options.length)];
             },
             body: JSON.stringify({
               model: 'llama-3.3-70b-versatile',
-              max_tokens: 1000,
-              messages: [{ role: 'system', content: systemPrompts[level] }, ...history]
-            })
+              max_tokens: 150,
+const recentHistory = history.slice(-6);
+
+messages: [
+  { role: 'system', content: systemPrompts[level] },
+  ...recentHistory
+]            })
           });
 
           if (!res.ok) {
@@ -2379,6 +2399,9 @@ async function analyzeSession() {
   addMsg("J’analyse la conversation...", "sophie");
 
   try {
+    const userOnlyHistory = history
+  .filter(msg => msg.role === 'user')
+  .slice(-8);
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -2387,6 +2410,7 @@ async function analyzeSession() {
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
+        max_tokens: 220
         messages: [
           {
             role: 'system',
@@ -2432,7 +2456,7 @@ Règles :
 - Pas de paragraphe long
 `
           },
-          ...history
+          ...userOnlyHistory
         ]
       })
     });
@@ -2732,6 +2756,7 @@ function listenForExerciseAnswer() {
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
+      max_tokens: 120,
       messages: [
         {
           role: 'system',

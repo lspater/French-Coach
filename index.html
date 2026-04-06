@@ -2683,6 +2683,16 @@ function startExerciseAnswer() {
   listenForExerciseAnswer();
 }
 
+function normalizeForLooseCompare(text) {
+  return String(text)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // accenten weg
+    .replace(/[.,!?;:()"'’`-]/g, ' ') // interpunctie weg
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+  
 function listenForExerciseAnswer() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
@@ -2730,9 +2740,24 @@ function listenForExerciseAnswer() {
       return;
     }
 
-    currentExerciseAnswer = answer;
-    const feedback = await evaluateExerciseAnswer(answer);
-    renderExerciseScreen(feedback);
+currentExerciseAnswer = answer;
+
+// simpele “cheap check” → skip API als het waarschijnlijk goed is
+const normalized = normalizeForLooseCompare(answer);
+
+// voorbeeldregel: korte simpele zinnen niet naar API sturen
+if (normalized.split(' ').length <= 5) {
+  renderExerciseScreen({
+    corrected: answer,
+    short_feedback: "Ça va, c’est correct.",
+    is_correct: true
+  });
+  return;
+}
+
+// anders → normale flow (API)
+const feedback = await evaluateExerciseAnswer(answer);
+renderExerciseScreen(feedback);
   };
 
   recognition.onerror = () => {
@@ -2743,7 +2768,16 @@ function listenForExerciseAnswer() {
 
   recognition.start();
 }
-
+function normalizeForLooseCompare(text) {
+  return String(text)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // accenten weg
+    .replace(/[.,!?;:()"'’`-]/g, ' ') // interpunctie weg
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+  
   async function evaluateExerciseAnswer(answerText) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',

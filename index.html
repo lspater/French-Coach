@@ -1397,9 +1397,9 @@ Rules:
 - Sometimes reformulate the user's sentence naturally in correct French instead of explicitly correcting it.
 - Keep the reply useful and conversational.
 
-Max 2 short sentences for the main reply, plus optional 1 short correction line.`
+Max 2 short sentences for the main reply, plus optional 1 short correction line.`,
 
- intermediate: `You are Sophie, a French conversation partner for intermediate learners (B1-B2).
+  intermediate: `You are Sophie, a French conversation partner for intermediate learners (B1-B2).
 
 Rules:
 - Respond in natural French.
@@ -1423,9 +1423,9 @@ Rules:
 - Sometimes reformulate the user's sentence naturally in correct French instead of explicitly correcting it.
 - Keep the reply useful and conversational.
 
-Max 3 short sentences for the main reply, plus optional 1 short correction line.`
+Max 3 short sentences for the main reply, plus optional 1 short correction line.`,
 
-advanced: `You are Sophie, a French conversation partner for advanced learners (C1-C2).
+  advanced: `You are Sophie, a French conversation partner for advanced learners (C1-C2).
 
 Rules:
 - Respond first to the substance of what the user said.
@@ -1451,7 +1451,6 @@ Rules:
 
 Max 4 short sentences for the main reply, plus optional 1 short correction line.`
 };
-
     function saveKey() {
       const val = document.getElementById('api-key-input').value.trim();
       if (!val.startsWith('gsk_')) {
@@ -2776,15 +2775,6 @@ renderExerciseScreen(feedback);
   };
 
   recognition.start();
-}
-function normalizeForLooseCompare(text) {
-  return String(text)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // accenten weg
-    .replace(/[.,!?;:()"'’`-]/g, ' ') // interpunctie weg
-    .replace(/\s+/g, ' ')
-    .trim();
 }
   
   async function evaluateExerciseAnswer(answerText) {
